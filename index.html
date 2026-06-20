@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand mediapipe game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header class="site-header">
+            <a class="brand" href="#">Hand mediapipe game</a>
+            <nav class="nav-links" aria-label="Primary">
+                <button type="button" data-page-target="work-page">Work</button>
+                <button type="button" data-page-target="camera-page">Camera</button>
+                <button type="button" id="account-btn">Account</button>
+            </nav>
+        </header>
+
+        <main class="arcade-shell" id="work">
+            <section class="game-gallery" aria-label="Game sections">
+                <button id="breakout-btn" class="game-panel" type="button" data-game-panel="breakout" style="--hero:url('https://www.pinballrebel.com/arcade/atari/breakout/breakout_1.jpg')">
+                    <span class="panel-count">01 / 04</span>
+                    <span class="panel-kicker">Classic paddle</span>
+                    <span class="panel-title">Breakout</span>
+                    <span class="panel-copy">Break bricks with wrist angle control and chase level progress.</span>
+                    <span class="panel-action">Start game</span>
+                </button>
+
+                <button id="dino-btn" class="game-panel" type="button" data-game-panel="dino" style="--hero:url('https://mpamusement.com/cdn/shop/products/Dinosaurera_1024x1024.jpg?v=1677522456')">
+                    <span class="panel-count">02 / 04</span>
+                    <span class="panel-kicker">Runner reflex</span>
+                    <span class="panel-title">Dino Run</span>
+                    <span class="panel-copy">Pinch to jump through a dark arcade sprint.</span>
+                    <span class="panel-action">Start game</span>
+                </button>
+
+                <button id="bird-btn" class="game-panel" type="button" data-game-panel="bird" style="--hero:url('https://media.pocketgamer.com/artwork/na-bgzif/flappy-bird-arcade-machine_jpg_320.jpg')">
+                    <span class="panel-count">03 / 04</span>
+                    <span class="panel-kicker">Flight timing</span>
+                    <span class="panel-title">Flappy Bird</span>
+                    <span class="panel-copy">Pinch to jump and keep the rhythm alive.</span>
+                    <span class="panel-action">Start game</span>
+                </button>
+
+                <button id="more-btn" class="game-panel coming-soon" type="button" data-game-panel="more" style="--hero:url('https://orantneon.com/cdn/shop/products/stickcontrollercartoon_2_1800x.jpg?v=1694488932')">
+                    <span class="panel-count">04 / 04</span>
+                    <span class="panel-kicker">Next update</span>
+                    <span class="panel-title">More</span>
+                    <span class="panel-copy">More gesture games are being prepared for this arcade.</span>
+                    <span class="panel-action">Coming soon</span>
+                </button>
+            </section>
+
+            <section class="game-container" aria-label="Active game">
+                <div class="game-tabs" aria-label="Game tabs">
+                    <button class="game-tab active" type="button" data-game-tab="breakout">Breakout</button>
+                    <button class="game-tab" type="button" data-game-tab="dino">Dino Run</button>
+                    <button class="game-tab" type="button" data-game-tab="bird">Flappy Bird</button>
+                    <button class="game-tab muted" type="button" data-game-tab="more">More Coming Soon</button>
+                </div>
+                <button id="exit-game-btn" class="game-close" type="button" aria-label="Close game">x</button>
+
+                <div class="game-stage">
+                    <div class="stage-meta">
+                        <span id="active-game-label">Breakout</span>
+                        <span>Gesture control enabled</span>
+                    </div>
+                    <div id="game-canvas"></div>
+                </div>
+
+                <aside class="side-console">
+                    <div class="video-container" id="camera-panel">
+                        <video id="video" autoplay playsinline></video>
+                        <canvas id="canvas"></canvas>
+                        <div class="status" id="status">Starting camera...</div>
+                    </div>
+
+                    <div class="console-card highscore">
+                        <h3>High Score</h3>
+                        <ol id="highscore-list"></ol>
+                    </div>
+
+                    <div class="controls">
+                        <button id="toggle-camera" type="button">Turn Camera Off</button>
+                        <div class="info">
+                            <span>FPS <strong id="fps">0</strong></span>
+                        </div>
+                    </div>
+                </aside>
+            </section>
+
+            <section id="work-page" class="info-page" aria-label="Project information" aria-hidden="true">
+                <button class="page-close" type="button" data-close-page aria-label="Close page">x</button>
+                <div class="project-page">
+                    <p class="page-count">PROJECT / 01</p>
+                    <p class="page-kicker">Gesture arcade lab</p>
+                    <h1>Hand mediapipe game turns your camera into a game controller.</h1>
+                    <p class="page-lead">
+                        This project combines browser games, MediaPipe hand tracking, and a local leaderboard system into one compact arcade interface. Players can sign in, test the camera, and control three games using simple hand gestures.
+                    </p>
+                    <div class="project-grid">
+                        <article>
+                            <span>01</span>
+                            <h2>Breakout</h2>
+                            <p>Use wrist angle to move the paddle, clear bricks, and progress through level-based gameplay.</p>
+                        </article>
+                        <article>
+                            <span>02</span>
+                            <h2>Dino Run</h2>
+                            <p>Use quick gesture timing for a runner-style challenge focused on reaction and rhythm.</p>
+                        </article>
+                        <article>
+                            <span>03</span>
+                            <h2>Flappy Bird</h2>
+                            <p>Turn gesture taps into flight control and keep your score climbing through tight gaps.</p>
+                        </article>
+                        <article>
+                            <span>04</span>
+                            <h2>Coming Soon</h2>
+                            <p>The fourth section is reserved for future camera-controlled arcade experiments.</p>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <section id="camera-page" class="info-page camera-page" aria-label="Camera test" aria-hidden="true">
+                <button class="page-close" type="button" data-close-page aria-label="Close page">x</button>
+                <div class="camera-test-frame">
+                    <video id="camera-test-video" autoplay playsinline muted></video>
+                    <canvas id="camera-test-canvas"></canvas>
+                    <div class="camera-test-status">
+                        <span>Camera Test</span>
+                        <strong id="camera-test-state">Waiting for camera...</strong>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <div class="hud-footer">
+            <span id="player-display">Guest mode</span>
+            <span>Hover or click to expand</span>
+        </div>
+
+        <div id="account-panel" class="account-panel hidden">
+            <button
+                id="close-account-panel"
+                class="close-account-btn">
+                ✕
+            </button>
+            <div id="login-form">
+                <h2>Sign in</h2>
+                <input id="login-username" placeholder="Username">
+                <div class="password-box">
+                    <input id="login-password" type="password" placeholder="Password">
+                    <span class="eye" data-target="login-password">Show</span>
+                </div>
+                <button id="login-btn">Login</button>
+                <p id="open-register">Create an account</p>
+            </div>
+
+            <div id="register-form" class="hidden">
+                <h2>Create account</h2>
+                <input id="reg-username" placeholder="Username">
+                <div class="password-box">
+                    <input id="reg-password" type="password" placeholder="Password">
+                    <span class="eye" data-target="reg-password">Show</span>
+                </div>
+                <input id="reg-email" placeholder="Email">
+                <button id="register-btn">Create Account</button>
+                <p id="back-login">Back to login</p>
+            </div>
+
+            <div id="profile-form" class="hidden">
+                <h2 id="profile-name"></h2>
+                <div class="avatar-box">
+                    <img id="avatar-preview" src="" alt="">
+                    <input type="file" id="avatar-upload" accept="image/*" hidden>
+                    <div class="avatar-placeholder">User</div>
+                </div>
+                <input id="profile-email" placeholder="Email">
+                <input  id="profile-age" type="number" min="1" max="99" placeholder="Age">
+                <select id="profile-gender">
+                    <option value="">Gender</option>
+                    <option>Male</option>
+                    <option>Female</option>
+                </select>
+                <button id="save-profile">Save</button>
+                <button id="logout-btn">Logout</button>
+            </div>
+        </div>
+
+        <div id="crop-modal" class="hidden">
+            <div class="crop-container">
+                <div id="crop-close">x</div>
+                <canvas id="crop-canvas" width="300" height="300"></canvas>
+                <div class="crop-overlay"></div>
+                <div class="crop-controls">
+                    <button id="zoom-in">+</button>
+                    <button id="zoom-out">-</button>
+                    <button id="crop-done">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+
+    <script src="js/hands_mediapipe.js"></script>
+    <script src="js/controller.js"></script>
+    <script src="js/breakout.js"></script>
+    <script src="js/dino.js"></script>
+    <script src="js/flappybird.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

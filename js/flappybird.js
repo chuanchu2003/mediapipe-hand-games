@@ -11,7 +11,7 @@ class BirdScene extends Phaser.Scene {
         this.pipes = null;
 
         this.score = 0;
-        this.debugNoCollision = true; //test xuyên tường để kiểm tra map 
+        this.debugNoCollision = false; //test xuyên tường để kiểm tra map 
         this.scoreText = null;
         this.instructionText = null;
 
@@ -351,11 +351,16 @@ class BirdScene extends Phaser.Scene {
 
                     pipe.scored = true;
 
-                    this.score++;
+                    this.passCount++;
+
+                    const reward =
+                        10 +
+                        Math.floor((this.passCount - 1) / 10);
+
+                    this.score += reward;
 
                     this.scoreText.setText(
-                        "Điểm: " +
-                        this.score
+                        "Điểm: " + this.score
                     );
 
                     this.pipeSpeed =

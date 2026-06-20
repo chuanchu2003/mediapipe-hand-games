@@ -3,7 +3,7 @@
 //  Controller: controller.js (pinch = jump, fist = restart)
 //  Renderer:   Phaser 3 Arcade Physics
 // ================================================================
-
+const API_URL = "https://mediapipe-hand-games.onrender.com";
 class DinoScene extends Phaser.Scene {
 
     constructor() {
@@ -505,7 +505,7 @@ class DinoScene extends Phaser.Scene {
         // save score
         if (window.currentUserId) {
             try {
-                await fetch("http://localhost:3000/saveScore", {
+                await fetch(`${API_URL}/saveScore`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({

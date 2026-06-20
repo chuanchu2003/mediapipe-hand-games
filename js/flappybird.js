@@ -1,3 +1,4 @@
+const API_URL = "https://mediapipe-hand-games.onrender.com";
 class BirdScene extends Phaser.Scene {
 
     constructor() {
@@ -416,7 +417,7 @@ class BirdScene extends Phaser.Scene {
         ) {
 
             await fetch(
-                "http://localhost:3000/saveScore",
+                `${API_URL}/saveScore`,
                 {
                     method: "POST",
                     headers: {

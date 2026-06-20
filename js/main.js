@@ -1,3 +1,4 @@
+const API_URL = "https://mediapipe-hand-games.onrender.com";
 // Biến toàn cục
 let currentGame = "breakout";
 let gameController;
@@ -438,7 +439,7 @@ document.getElementById("register-btn").onclick = async ()=>{
     return;
   }
 
-  const res = await fetch("http://localhost:3000/register",{
+  const res = await fetch(`${API_URL}/register`,{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({username,password,email})
@@ -460,7 +461,7 @@ document.getElementById("login-btn").onclick = async ()=>{
   const username = document.getElementById("login-username").value;
   const password = document.getElementById("login-password").value;
 
-  const res = await fetch("http://localhost:3000/login",{
+  const res = await fetch(`${API_URL}/login`,{
 
     method:"POST",
     headers:{"Content-Type":"application/json"},
@@ -495,7 +496,7 @@ document.getElementById("login-btn").onclick = async ()=>{
 
 async function loadProfile(){
 
-  const res = await fetch("http://localhost:3000/profile/"+userId);
+  const res = await fetch(`${API_URL}/profile/`+userId);
 
   const data = await res.json();
   if(data.user.avatar){
@@ -547,7 +548,7 @@ document.getElementById("save-profile").onclick = async ()=>{
   const gender = document.getElementById("profile-gender").value;
   const email = document.getElementById("profile-email").value;
 
-  const res = await fetch("http://localhost:3000/profile",{
+  const res = await fetch(`${API_URL}/profile`,{
 
     method:"POST",
     headers:{"Content-Type":"application/json"},
@@ -722,7 +723,7 @@ async function updateLobbyHighScore(){
 
     const res =
       await fetch(
-        `http://localhost:3000/myscores/${userId}`
+        `${API_URL}/myscores/${userId}`
       );
 
     const data = await res.json();
@@ -843,7 +844,7 @@ async function updateHighScoreBoard() {
   }
 
   const res = await fetch(
-    `http://localhost:3000/leaderboard/${game}/${userId}`
+    `${API_URL}/leaderboard/${game}/${userId}`
   );
 
   const data = await res.json();

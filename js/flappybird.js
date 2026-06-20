@@ -26,6 +26,7 @@ class BirdScene extends Phaser.Scene {
         this.controller = data.controller;
 
         this.score = 0;
+        this.passCount = 0;
         this.gameStarted = false;
         this.gameOverFlag = false;
 

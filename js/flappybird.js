@@ -1,4 +1,4 @@
-const API_URL = "https://mediapipe-hand-games.onrender.com";
+
 class BirdScene extends Phaser.Scene {
 
     constructor() {

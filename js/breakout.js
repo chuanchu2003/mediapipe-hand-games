@@ -1,3 +1,4 @@
+
 class BootScene extends Phaser.Scene {
 
     constructor() {
@@ -572,7 +573,7 @@ hitBrick(ball, brick) {
       strokeThickness: 4
     }).setOrigin(0.5);
     if(window.currentUserId){
-      fetch("http://localhost:3000/completeLevel",{
+      fetch(`${API_URL}/completeLevel`,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
@@ -787,7 +788,7 @@ hitBrick(ball, brick) {
 
     if (!userId) return;
 
-    await fetch("http://localhost:3000/saveScore", {
+    await fetch(`${API_URL}/saveScore`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -904,7 +905,7 @@ class LevelSelectScene extends Phaser.Scene {
         this.userId = data.userId;
         this.completedLevels = {};
 
-        fetch("http://localhost:3000/levels/"+this.userId)
+        fetch(`${API_URL}/levels/`+this.userId)
         .then(res=>res.json())
         .then(data=>{
           if(data.success){

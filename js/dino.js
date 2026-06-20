@@ -3,7 +3,7 @@
 //  Controller: controller.js (pinch = jump, fist = restart)
 //  Renderer:   Phaser 3 Arcade Physics
 // ================================================================
-const API_URL = "https://mediapipe-hand-games.onrender.com";
+
 class DinoScene extends Phaser.Scene {
 
     constructor() {

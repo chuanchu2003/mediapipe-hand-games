@@ -1,3 +1,4 @@
+require("dotenv").config();
 console.log("SERVER VERSION 2");
 const express = require("express");
 const bcrypt = require("bcrypt");
@@ -46,49 +47,57 @@ app.post("/register", async (req, res) => {
   }
 
   // ===== CHECK EMAIL TRÙNG =====
-  db.get(
-    "SELECT * FROM users WHERE email=?",
-    [email],
-    async (err, existingEmail) => {
+try {
 
-      if (existingEmail) {
-        return res.json({
-          success: false,
-          message: "Email đã được sử dụng"
-        });
-      }
+  const existingEmail = await db.execute({
+    sql: "SELECT * FROM users WHERE email=?",
+    args: [email]
+  });
 
-      const hash = await bcrypt.hash(password, 10);
+  if(existingEmail.rows.length){
+    return res.json({
+      success:false,
+      message:"Email đã được sử dụng"
+    });
+  }
 
-      db.run(
-        "INSERT INTO users(username,password,email) VALUES(?,?,?)",
-        [username, hash, email],
-        function(err) {
+  const hash = await bcrypt.hash(password,10);
 
-          if (err) {
-            return res.json({
-              success: false,
-              message: "Tài khoản đã tồn tại"
-            });
-          }
+  const result = await db.execute({
+    sql:"INSERT INTO users(username,password,email) VALUES(?,?,?)",
+    args:[username,hash,email]
+  });
 
-          const userId = this.lastID;
+  const userId = Number(result.lastInsertRowid);
 
-          db.run(
-            "INSERT INTO scores(user_id, breakout_highscore, flappy_highscore, dino_highscore) VALUES(?,0,0,0)",
-            [userId]
-          );
+  await db.execute({
+    sql:`
+      INSERT INTO scores(
+        user_id,
+        breakout_highscore,
+        flappy_highscore,
+        dino_highscore
+      )
+      VALUES(?,0,0,0)
+    `,
+    args:[userId]
+  });
 
-          res.json({
-            success: true,
-            userId: userId
-          });
+  res.json({
+    success:true,
+    userId
+  });
 
-        }
-      );
+} catch(err){
 
-    }
-  );
+  console.log(err);
+
+  res.json({
+    success:false,
+    message:"Tài khoản đã tồn tại"
+  });
+
+}
 
 });
 
@@ -99,38 +108,44 @@ app.post("/register", async (req, res) => {
 LOGIN
 ========================
 */
+app.post("/login", async (req,res)=>{
 
-app.post("/login", (req, res) => {
+  const { username,password } = req.body;
 
-  const { username, password } = req.body;
+  try{
 
-  db.get(
-    "SELECT * FROM users WHERE username=?",
-    [username],
-    async (err, user) => {
+    const result = await db.execute({
+      sql:"SELECT * FROM users WHERE username=?",
+      args:[username]
+    });
 
-      if (!user) {
-        return res.json({ success: false });
-      }
+    const user = result.rows[0];
 
-      const match = await bcrypt.compare(password, user.password);
-
-      if (!match) {
-        return res.json({ success: false });
-      }
-
-      res.json({
-        success: true,
-        userId: user.id,
-        username: user.username
-      });
-
+    if(!user){
+      return res.json({success:false});
     }
-  );
+
+    const match =
+      await bcrypt.compare(password,user.password);
+
+    if(!match){
+      return res.json({success:false});
+    }
+
+    res.json({
+      success:true,
+      userId:user.id,
+      username:user.username
+    });
+
+  }catch(err){
+
+    console.log(err);
+    res.json({success:false});
+
+  }
 
 });
-
-
 
 /*
 ========================
@@ -138,7 +153,8 @@ SAVE SCORE
 ========================
 */
 
-app.post("/saveScore", (req,res)=>{
+app.post("/saveScore", async (req,res)=>{
+  try{
 
   const { userId, game, score } = req.body;
 
@@ -161,33 +177,43 @@ app.post("/saveScore", (req,res)=>{
     return res.json({success:false});
   }
 
-  db.get(
-    `SELECT ${column} as highscore
-     FROM scores
-     WHERE user_id=?`,
-    [userId],
-    (err,row)=>{
-
-      if(!row){
-        return res.json({success:false});
-      }
-
-      if(score > row.highscore){
-
-        db.run(
-          `UPDATE scores
-           SET ${column}=?
-           WHERE user_id=?`,
-          [score,userId]
-        );
-
-      }
-
-      res.json({success:true});
-    }
-  );
+const result = await db.execute({
+  sql:`
+    SELECT ${column} as highscore
+    FROM scores
+    WHERE user_id=?
+  `,
+  args:[userId]
 });
 
+const row = result.rows[0];
+
+if(!row){
+  return res.json({success:false});
+}
+
+if(score > row.highscore){
+
+  await db.execute({
+    sql:`
+      UPDATE scores
+      SET ${column}=?
+      WHERE user_id=?
+    `,
+    args:[score,userId]
+  });
+
+}
+
+res.json({success:true});
+
+  }catch(err){
+
+    console.log(err);
+    res.json({success:false});
+
+  }});
+
 
 
 /*
@@ -201,8 +227,8 @@ LEADERBOARD
 ========================
 */
 
-app.get("/leaderboard/:game/:userId", (req, res) => {
-
+app.get("/leaderboard/:game/:userId", async (req,res)=>{
+  try{
   const game = req.params.game;
   const userId = req.params.userId;
 
@@ -224,85 +250,78 @@ app.get("/leaderboard/:game/:userId", (req, res) => {
     });
   }
 
-  db.all(
-    `
-    SELECT
-      users.id,
-      users.username,
-      scores.${column} AS highscore
-    FROM users
-    JOIN scores
-      ON users.id = scores.user_id
-    ORDER BY scores.${column} DESC
-    `,
-    [],
-    (err, rows) => {
+const result = await db.execute(`
+SELECT
+  users.id,
+  users.username,
+  scores.${column} AS highscore
+FROM users
+JOIN scores
+ON users.id=scores.user_id
+ORDER BY scores.${column} DESC
+`);
 
-      if (err) {
+const rows = result.rows;
+let userRank = null;
+let userData = null;
 
-        console.log(err);
-
-        return res.json({
-          success: false,
-          message: "Lỗi server"
-        });
-      }
-
-      let userRank = null;
-      let userData = null;
-
-      rows.forEach((r, i) => {
-
-        if (r.id == userId) {
-
-          userRank = i + 1;
-          userData = r;
-
-        }
-
-      });
-
-      const top5 = rows.slice(0, 5);
-
-      res.json({
-        success: true,
-        top5: top5,
-        userRank: userRank,
-        userScore: userData ? userData.highscore : 0,
-        username: userData ? userData.username : ""
-      });
-
-    }
-  );
-
+rows.forEach((r, i) => {
+  if (r.id == userId) {
+    userRank = i + 1;
+    userData = r;
+  }
 });
+
+const top5 = rows.slice(0, 5);
+
+res.json({
+  success: true,
+  top5,
+  userRank,
+  userScore: userData ? userData.highscore : 0,
+  username: userData ? userData.username : ""
+});
+    }catch(err){
+
+    console.log(err);
+    res.json({success:false});
+
+  }
+});
+
 /*
 ========================
 GET PROFILE
 ========================
 */
 
-app.get("/profile/:id", (req,res)=>{
+app.get("/profile/:id", async (req,res)=>{
 
   const id = req.params.id;
 
-  db.get(
-    "SELECT username,age,gender,email,avatar FROM users WHERE id=?",
-    [id],
-    (err,row)=>{
+const result = await db.execute({
+  sql:`
+    SELECT
+      username,
+      age,
+      gender,
+      email,
+      avatar
+    FROM users
+    WHERE id=?
+  `,
+  args:[id]
+});
 
-      if(!row){
-        return res.json({success:false});
-      }
+const row = result.rows[0];
+if(!row){
+  return res.json({success:false});
+}
 
-      res.json({
-        success:true,
-        user:row
-      });
-
-    }
-  );
-
+res.json({
+  success:true,
+  user:row
+});
 });
 
 
@@ -312,7 +331,7 @@ UPDATE PROFILE
 ========================
 */
 
-app.post("/profile", (req,res)=>{
+app.post("/profile", async (req,res)=>{
 
   const {userId,age,gender,email,avatar} = req.body;
 
@@ -335,83 +354,76 @@ app.post("/profile", (req,res)=>{
   }
 
   // ===== CHECK TRÙNG =====
-  db.get(
-    "SELECT * FROM users WHERE email=? AND id != ?",
-    [email, userId],
-    (err, existingEmail)=>{
-
-      if(existingEmail){
-        return res.json({
-          success:false,
-          message:"Email đã được sử dụng"
-        });
-      }
-
-      // ===== UPDATE =====
-      db.run(
-        "UPDATE users SET age=?,gender=?,email=?,avatar=? WHERE id=?",
-        [age,gender,email,avatar,userId],
-        (err)=>{
-
-          if(err){
-             return res.json({
-              success:false,
-              message:"Lỗi khi cập nhật profile"
-            });
-          }
-
-          res.json({success:true});
-        }
-      );
-
-    }
-  );
-
+const existingEmail =
+await db.execute({
+  sql:"SELECT * FROM users WHERE email=? AND id != ?",
+  args:[email,userId]
 });
-app.post("/completeLevel", (req,res)=>{
+
+if(existingEmail.rows.length){
+  return res.json({
+    success:false,
+    message:"Email đã được sử dụng"
+  });
+}
+await db.execute({
+  sql:`
+    UPDATE users
+    SET age=?,
+        gender=?,
+        email=?,
+        avatar=?
+    WHERE id=?
+  `,
+  args:[
+    age,
+    gender,
+    email,
+    avatar,
+    userId
+  ]
+});
+res.json({success:true});
+});
+app.post("/completeLevel", async (req,res)=>{
 
   const {userId, level} = req.body;
 
-  db.run(
-    `INSERT OR REPLACE INTO level_progress(user_id,level,completed)
-     VALUES(?,?,1)`,
-    [userId, level],
-    ()=>{
-      res.json({success:true});
-    }
-  );
+await db.execute({
+  sql:`
+    INSERT OR REPLACE INTO level_progress(
+      user_id,
+      level,
+      completed
+    )
+    VALUES(?,?,1)
+  `,
+  args:[userId,level]
+});
+
+res.json({success:true});
 
 });
-app.get("/levels/:userId",(req,res)=>{
+app.get("/levels/:userId", async (req,res)=>{
 
   const userId=req.params.userId;
 
-  db.all(
-    "SELECT level FROM level_progress WHERE user_id=?",
-    [userId],
-    (err,rows)=>{
+const result = await db.execute({
+  sql:"SELECT level FROM level_progress WHERE user_id=?",
+  args:[userId]
+});
 
-      if(err){
-        console.log("DB ERROR:", err);
-        return res.json({success:false});
-      }
+const rows = result.rows;
+let levels = {};
 
-      let result={};
+rows.forEach(r => {
+  levels[r.level] = true;
+});
 
-      if(rows){
-        rows.forEach(r=>{
-          result[r.level]=true;
-        });
-      }
-
-      res.json({
-        success:true,
-        levels:result
-      });
-
-    }
-  );
-
+res.json({
+  success:true,
+  levels
+});
 });
 /*
 ========================
@@ -422,32 +434,30 @@ SERVER START
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
-app.get("/myscores/:userId",(req,res)=>{
+app.get("/myscores/:userId", async (req,res)=>{
 
   const userId = req.params.userId;
 
-  db.get(
-    `
+const result = await db.execute({
+  sql:`
     SELECT
       breakout_highscore,
       dino_highscore,
       flappy_highscore
     FROM scores
     WHERE user_id=?
-    `,
-    [userId],
-    (err,row)=>{
+  `,
+  args:[userId]
+});
 
-      if(err || !row){
-        return res.json({success:false});
-      }
+const row = result.rows[0];
+if(!row){
+  return res.json({success:false});
+}
 
-      res.json({
-        success:true,
-        scores:row
-      });
-
-    }
-  );
+res.json({
+  success:true,
+  scores:row
+});
 
 });

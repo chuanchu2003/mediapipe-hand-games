@@ -134,7 +134,7 @@ app.post("/login", async (req,res)=>{
 
     res.json({
       success:true,
-      userId:user.id,
+      userId:Number(user.id),
       username:user.username
     });
 
@@ -296,6 +296,7 @@ GET PROFILE
 */
 
 app.get("/profile/:id", async (req,res)=>{
+  try{
 
   const id = req.params.id;
 
@@ -322,6 +323,13 @@ res.json({
   success:true,
   user:row
 });
+  }catch(err){
+
+    console.log(err);
+    res.json({success:false});
+
+  }
+
 });
 
 
@@ -332,6 +340,7 @@ UPDATE PROFILE
 */
 
 app.post("/profile", async (req,res)=>{
+  try{
 
   const {userId,age,gender,email,avatar} = req.body;
 
@@ -384,8 +393,16 @@ await db.execute({
   ]
 });
 res.json({success:true});
+  }catch(err){
+
+    console.log(err);
+    res.json({success:false});
+
+  }
+
 });
 app.post("/completeLevel", async (req,res)=>{
+  try{
 
   const {userId, level} = req.body;
 
@@ -403,8 +420,16 @@ await db.execute({
 
 res.json({success:true});
 
+  }catch(err){
+
+    console.log(err);
+    res.json({success:false});
+
+  }
+
 });
 app.get("/levels/:userId", async (req,res)=>{
+  try{
 
   const userId=req.params.userId;
 
@@ -424,6 +449,13 @@ res.json({
   success:true,
   levels
 });
+  }catch(err){
+
+    console.log(err);
+    res.json({success:false});
+
+  }
+
 });
 /*
 ========================
@@ -435,6 +467,7 @@ app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
 });
 app.get("/myscores/:userId", async (req,res)=>{
+  try{
 
   const userId = req.params.userId;
 
@@ -459,5 +492,12 @@ res.json({
   success:true,
   scores:row
 });
+
+  }catch(err){
+
+    console.log(err);
+    res.json({success:false});
+
+  }
 
 });

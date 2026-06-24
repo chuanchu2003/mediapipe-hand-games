@@ -45,12 +45,7 @@ class DinoScene extends Phaser.Scene {
         this.hiScoreText  = null;
         this.messageText  = null;
         this.subText      = null;
-        
-        this.messageText = this.add.text(0,0,"");
-        this.subText = this.add.text(0,0,"");
 
-        this.messageText.setVisible(false);
-        this.subText.setVisible(false);
 
         // dino sprite frames
         this.dinoFrame    = 0;

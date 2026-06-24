@@ -45,6 +45,12 @@ class DinoScene extends Phaser.Scene {
         this.hiScoreText  = null;
         this.messageText  = null;
         this.subText      = null;
+        
+        this.messageText = this.add.text(0,0,"");
+        this.subText = this.add.text(0,0,"");
+
+        this.messageText.setVisible(false);
+        this.subText.setVisible(false);
 
         // dino sprite frames
         this.dinoFrame    = 0;
@@ -256,6 +262,7 @@ class DinoScene extends Phaser.Scene {
     //  CREATE
     // ----------------------------------------------------------------
     create() {
+        this.cameras.main.setBackgroundColor('#ffffff');
         this.invincibleTimer = 0;
         this.dustTimer = 0;
         this.gameStarted = false;
@@ -287,15 +294,17 @@ class DinoScene extends Phaser.Scene {
         // ---- sky gradient (draw as rectangle layers) ----
         this.add.rectangle(430, 322, 860, 451, 0xf7f7f7).setDepth(0);
 
-        // ---- ground line ----
-        this.add.rectangle( 430, this.GROUND_Y, 860, 4, 0x888888).setDepth(1);
-
         // ---- scrolling ground tiles ----
         this.groundTiles = [];
-        for (let i = 0; i < 2; i++) {
-            const t = this.add.image(i * 860, this.GROUND_Y + 9, "groundTile")
-                .setOrigin(0, 0)
-                .setDepth(1);
+        for(let i=0;i<2;i++){
+            const t = this.add.image(
+                i*860,
+                510,
+                "way"
+            )
+            .setOrigin(0,0)
+            .setDepth(1);
+
             this.groundTiles.push(t);
         }
 
@@ -317,7 +326,7 @@ class DinoScene extends Phaser.Scene {
         const DINO_H = 47;
 
         this.dino = this.physics.add.sprite(
-            60,
+            -400,
             this.GROUND_Y - DINO_H + 4,
             "spriteSheet"
         )
@@ -358,6 +367,17 @@ class DinoScene extends Phaser.Scene {
         )
         .setOrigin(0.5)
         .setDepth(10);            
+        // ---- start message ----
+        this.messageText = this.add.text(400, 240,
+            "DINO RUN",
+            {
+                fontSize: "56px",
+                fontFamily: "monospace",
+                color: "#222222",
+                stroke: "#ffffff",
+                strokeThickness: 6
+            }
+        ).setOrigin(0.5).setDepth(6);
 
         this.subText = this.add.text(400, 310,
             "🤏  Pinch to start",
@@ -367,6 +387,16 @@ class DinoScene extends Phaser.Scene {
                 color: "#444444"
             }
         ).setOrigin(0.5).setDepth(6);
+
+        // hint tag
+        this.add.text(400, 560,
+            "Pinch = jump   •   Fist = restart after Game Over",
+            {
+                fontSize: "14px",
+                fontFamily: "monospace",
+                color: "#888888"
+            }
+        ).setOrigin(0.5).setDepth(5);
 
         // ---- obstacle spawn timer ----
         this.spawnEvent = this.time.addEvent({

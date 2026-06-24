@@ -38,7 +38,7 @@ class DinoScene extends Phaser.Scene {
 
         // scroll
         this.groundTiles  = [];
-        this.GROUND_Y     = 510;
+        this.GROUND_Y     = 565;
 
         // UI
         this.scoreText    = null;
@@ -80,11 +80,11 @@ class DinoScene extends Phaser.Scene {
     //  PRELOAD  – generate textures with Phaser graphics API
     // ----------------------------------------------------------------
     preload() {
-        this._makeDinoTextures();
-        this._makeGroundTexture();
-        this._makeCactusTextures();
-        this._makeBirdTexture();
-        this._makeCloudTexture();
+        this.load.image(
+            "spriteSheet",
+            "images/offline-sprite-1x.png"
+        );
+
         this._makeDustTexture();
     }
 
@@ -256,6 +256,8 @@ class DinoScene extends Phaser.Scene {
     //  CREATE
     // ----------------------------------------------------------------
     create() {
+        this.invincibleTimer = 0;
+        this.dustTimer = 0;
         this.gameStarted = false;
         this.gameOver    = false;
         this.score       = 0;
@@ -265,18 +267,33 @@ class DinoScene extends Phaser.Scene {
         this.dinoFrame   = 0;
         this.frameTick   = 0;
         this.dustTimer   = 0;
+        this.lives = 3;
 
+        this.hearts = [];
+
+        for(let i=0;i<3;i++){
+            this.hearts.push(
+                this.add.text(
+                    730 + i*35,
+                    45,
+                    "❤",
+                    {
+                        fontSize:"32px",
+                        color:"#ff4444"
+                    }
+                ).setDepth(10)
+            );
+        }
         // ---- sky gradient (draw as rectangle layers) ----
-        this.add.rectangle(400, 300, 800, 600, 0xddeeff).setDepth(0);
+        this.add.rectangle(430, 322, 860, 451, 0xf7f7f7).setDepth(0);
 
         // ---- ground line ----
-        this.add.rectangle(400, this.GROUND_Y, 800, 4, 0x888888)
-            .setDepth(1);
+        this.add.rectangle( 430, this.GROUND_Y, 860, 4, 0x888888).setDepth(1);
 
         // ---- scrolling ground tiles ----
         this.groundTiles = [];
         for (let i = 0; i < 2; i++) {
-            const t = this.add.image(i * 800, this.GROUND_Y + 9, "groundTile")
+            const t = this.add.image(i * 860, this.GROUND_Y + 9, "groundTile")
                 .setOrigin(0, 0)
                 .setDepth(1);
             this.groundTiles.push(t);
@@ -296,30 +313,26 @@ class DinoScene extends Phaser.Scene {
         // ---- dino ----
         // dùng origin(0,0) → sprite.y = top-left → body.y = sprite.y → không bị offset
         // đặt dino sao cho đáy sprite = GROUND_Y
-        const DINO_H = 44;
+        const DINO_W = 44;
+        const DINO_H = 47;
+
         this.dino = this.physics.add.sprite(
-            109,                        // x: center 130 - width/2
-            this.GROUND_Y - DINO_H,     // y: top = ground - height
-            "dino0"
-        ).setOrigin(0, 0).setDepth(3);
+            110,
+            this.GROUND_Y - DINO_H + 4,
+            "spriteSheet"
+        )
+        .setOrigin(0,0)
+        .setCrop(677,2,44,47)
+        .setDepth(3);
 
         this.dino.body.setGravityY(this.gravity);
         this.dino.body.setCollideWorldBounds(false);
-        // hitbox nhỏ hơn sprite để bao dung hơn
-        this.dino.body.setSize(28, 40);
-        this.dino.body.setOffset(7, 4);
 
+        this.dino.body.setSize(34, 39);
+        this.dino.body.setOffset(5, 6);
         // va chạm với ground tĩnh
         this.physics.add.collider(this.dino, this.groundCollider);
 
-        // ---- overlap (slightly forgiving hitbox) ----
-        this.physics.add.overlap(
-            this.dino,
-            this.obstacles,
-            this._hitObstacle,
-            null,
-            this
-        );
 
         // ---- score UI ----
         const textStyle = {
@@ -333,6 +346,18 @@ class DinoScene extends Phaser.Scene {
         this.hiScoreText = this.add.text(580, 18,
             "HI  " + this.hiScore, textStyle).setDepth(5);
 
+        this.speedDisplay = this.add.text(
+            430,
+            600,
+            "Speed: 0",
+            {
+                fontSize:"24px",
+                color:"#333",
+                fontFamily:"monospace"
+            }
+        )
+        .setOrigin(0.5)
+        .setDepth(10);            
         // ---- start message ----
         this.messageText = this.add.text(400, 240,
             "DINO RUN",
@@ -404,38 +429,137 @@ class DinoScene extends Phaser.Scene {
     //  SPAWN helpers
     // ----------------------------------------------------------------
     _spawnObstacle() {
-        const roll = Phaser.Math.Between(0, 100);
 
-        if (roll < 20 && this.score > 300) {
-            // flying bird at score > 300
+        // chim chỉ xuất hiện khi đã chơi được một lúc
+        if (this.score > 300 && Phaser.Math.Between(0,100) < 18) {
             this._spawnBird();
-        } else if (roll < 45) {
-            // tall double cactus (origin 0,0 → y = top)
-            const cactusH = 80;
-            const obs = this.obstacles.create(
-                880, this.GROUND_Y - cactusH, "cactusT"
-            ).setOrigin(0, 0).setDepth(2);
-            obs.body.setAllowGravity(false);
-            obs.body.setImmovable(true);
-            obs.body.setVelocityX(-this.speed);
-            obs.body.setSize(64, cactusH);
-            obs.body.setOffset(8, 0);
-            obs.obsType = "cactus";
+            return;
+        }
+
+        // 20 giây đầu hoặc khoảng 200 điểm đầu chỉ spawn đơn
+        const allowDouble =
+            this.score > 100 &&
+            Phaser.Math.Between(0,100) < 20;
+
+        // 50% mini - 50% cactus lớn
+        const useMini = Phaser.Math.Between(0,1) === 0;
+
+        if (useMini) {
+
+            const type = Phaser.Math.Between(1,3);
+
+            this._spawnMini(type,880);
+
+            // chỉ spawn đôi cùng loại
+            if (allowDouble) {
+                this._spawnMini(
+                    type,
+                    880 + 17 + 2
+                );
+            }
+
         } else {
-            // small single cactus
-            const cactusH = 60;
-            const obs = this.obstacles.create(
-                880, this.GROUND_Y - cactusH, "cactusS"
-            ).setOrigin(0, 0).setDepth(2);
-            obs.body.setAllowGravity(false);
-            obs.body.setImmovable(true);
-            obs.body.setVelocityX(-this.speed);
-            obs.body.setSize(24, cactusH);
-            obs.body.setOffset(7, 0);
-            obs.obsType = "cactus";
+
+            const first = Phaser.Math.Between(1,3);
+
+            this._spawnBig(first,880);
+
+            // cactus3 + cactus3 bị cấm
+            if (allowDouble) {
+
+                let second;
+
+                if (first === 3) {
+                    second = Phaser.Math.Between(1,2);
+                }
+                else {
+                    second = Phaser.Math.Between(1,3);
+
+                    while (first === 3 && second === 3) {
+                        second = Phaser.Math.Between(1,2);
+                    }
+                }
+
+                const width =
+                    first === 3 ? 29 : 25;
+
+                this._spawnBig(
+                    second,
+                    880 + width + 2
+                );
+            }
         }
     }
 
+    _spawnMini(type,x){
+
+        const cropX = {
+            1:245,
+            2:262,
+            3:296
+        };
+
+        const obs = this.obstacles.create(
+            x,
+            this.GROUND_Y - 35 + 4,
+            "spriteSheet"
+        )
+        .setOrigin(0,0)
+        .setCrop(cropX[type],2,17,35)
+        .setDepth(2);
+
+        obs.body.setAllowGravity(false);
+        obs.body.setImmovable(true);
+        obs.body.setVelocityX(-this.speed);
+
+        obs.obsType = "mini";
+        obs.variant = type;
+    }
+    _spawnBig(type,x){
+
+        const cropX = {
+            1:332,
+            2:382,
+            3:431
+        };
+
+        const width = {
+            1:25,
+            2:25,
+            3:29
+        };
+
+        const height = {
+            1:50,
+            2:50,
+            3:47
+        };
+
+        const obs = this.obstacles.create(
+            x,
+            this.GROUND_Y - height[type] + 4,
+            "spriteSheet"
+        )
+        .setOrigin(0,0)
+        .setCrop(
+            cropX[type],
+            2,
+            width[type],
+            height[type]
+        )
+        .setDepth(2);
+
+        obs.body.setAllowGravity(false);
+        obs.body.setImmovable(true);
+        obs.body.setVelocityX(-this.speed);
+
+        obs.obsType =
+            type === 3
+                ? "cactus3"
+                : "cactus";
+
+        obs.variant = type;
+    }
     _spawnBird() {
         const heightOptions = [
             this.GROUND_Y - 130,
@@ -455,7 +579,9 @@ class DinoScene extends Phaser.Scene {
     }
 
     _spawnCloud() {
-        const y = Phaser.Math.Between(60, 200);
+        const y = Phaser.Math.Between(50, 180);
+        const scale = Phaser.Math.FloatBetween(0.7,1.3);
+        cloud.setScale(scale);
         const spd = Phaser.Math.Between(40, 80);
         const cloud = this.add.image(900, y, "cloud")
             .setAlpha(0.75).setDepth(1);
@@ -471,10 +597,22 @@ class DinoScene extends Phaser.Scene {
     //  HIT
     // ----------------------------------------------------------------
     _hitObstacle() {
-        if (this.gameOver) return;
-        this._triggerGameOver();
-    }
 
+        if(this.invincibleTimer > 0)
+            return;
+
+        this.lives--;
+
+        if(this.hearts[this.lives]){
+            this.hearts[this.lives].setVisible(false);
+        }
+
+        this.invincibleTimer = 1200;
+
+        if(this.lives <= 0){
+            this._triggerGameOver();
+        }
+    }
     async _triggerGameOver() {
         if (this.gameOver) return;
         this.gameOver = true;
@@ -485,7 +623,7 @@ class DinoScene extends Phaser.Scene {
         });
 
         // dead pose
-        this.dino.setTexture("dinoDead");
+        this.dino.setCrop(897,2,44,47);
 
         // flash red overlay
         this.flashTimer = 300;
@@ -497,10 +635,27 @@ class DinoScene extends Phaser.Scene {
 
         // big game over text
         this.messageText.setText("GAME OVER");
+        this.messageText.y = 250;
         this.messageText.setVisible(true);
 
         this.subText.setText("👊  Fist to restart");
         this.subText.setVisible(true);
+        this.restartIcon = this.add.image(
+                    430,
+                    320,
+                    "spriteSheet"
+                )
+                .setCrop(2,2,36,32)
+                .setScale(2);
+                this.restartHint = this.add.text(
+            430,
+            385,
+            "Click mouse or close your hand to restart",
+            {
+                fontSize:"20px",
+                color:"#444"
+            }
+        ).setOrigin(0.5);
 
         // save score
         if (window.currentUserId) {
@@ -532,6 +687,14 @@ class DinoScene extends Phaser.Scene {
             this.flashTimer -= delta;
         }
 
+        this.obstacles.getChildren().forEach(obs => {
+            if (this._complexCollision(this.dino, obs)) {
+                this._hitObstacle();
+            }
+        });
+        if(this.invincibleTimer > 0){
+            this.invincibleTimer -= delta;
+        }
         // ---- game over: wait for fist ----
         if (this.gameOver) {
             if (this.controller && this.controller.justClosedFist()) {
@@ -554,12 +717,15 @@ class DinoScene extends Phaser.Scene {
         const dt = delta / 1000; // seconds
 
         // ---- score ----
-        this.score += dt * (this.speed / 6);
+        this.score += dt * (this.speed / 30);
         this.scoreText.setText("SCORE  " + Math.floor(this.score));
 
         // ---- speed ramp ----
         this.speed = this.baseSpeed + Math.floor(this.score / 4);
-
+        this.speedDisplay.setText(
+            "Speed: " +
+            Math.floor(this.speed)
+        );
         // ---- jump input ----
         // dùng body.blocked.down (chính xác nhất với static collider)
         const onGround = this.dino.body.blocked.down ||
@@ -579,14 +745,33 @@ class DinoScene extends Phaser.Scene {
         const onGround2 = this.dino.body.blocked.down || this.dino.body.touching.down;
         if (onGround2) {
             this.frameTick += delta;
-            if (this.frameTick > 90) {
+            if (this.frameTick > 80) {
                 this.frameTick = 0;
-                this.dinoFrame = this.dinoFrame === 1 ? 2 : 1;
-                this.dino.setTexture("dino" + this.dinoFrame);
+
+                const frames = [
+                    [677,2],
+                    [721,2],
+                    [765,2],
+                    [809,2],
+                    [853,2]
+                ];
+
+                this.dinoFrame++;
+                if(this.dinoFrame >= frames.length)
+                    this.dinoFrame = 0;
+
+                const f = frames[this.dinoFrame];
+
+                this.dino.setCrop(
+                    f[0],
+                    f[1],
+                    44,
+                    47
+                );
             }
         } else {
             // airborne – standing frame
-            this.dino.setTexture("dino0");
+            this.dino.setCrop(677,2,44,47);
         }
 
         // ---- bird wing flap ----
@@ -614,8 +799,8 @@ class DinoScene extends Phaser.Scene {
         // ---- scroll ground tiles ----
         this.groundTiles.forEach(tile => {
             tile.x -= this.speed * dt;
-            if (tile.x <= -800) {
-                tile.x += 1600;
+            if (tile.x <= -860) {
+                tile.x += 1720;
             }
         });
 
@@ -630,6 +815,77 @@ class DinoScene extends Phaser.Scene {
         }
     }
 
+    _complexCollision(dino, obs) {
+
+        const dinoRects = [
+            {x:dino.x+0 ,y:dino.y+0 ,w:32,h:35},
+            {x:dino.x+32,y:dino.y+0 ,w:12,h:19},
+            {x:dino.x+8 ,y:dino.y+35,w:18,h:12}
+        ];
+
+        let obsRects=[];
+
+        /*
+        if(this.debugRects){
+            this.debugRects.clear();
+        }
+
+        this.debugRects = this.add.graphics();
+
+        this.debugRects.lineStyle(1,0xff0000);
+
+        [...dinoRects,...obsRects].forEach(r=>{
+            this.debugRects.strokeRect(
+                r.x,
+                r.y,
+                r.w,
+                r.h
+            );
+        });
+        */    
+        if(obs.obsType==="mini"){
+            obsRects=[
+                {x:obs.x,y:obs.y+5,w:17,h:30},
+                {x:obs.x+5,y:obs.y,w:7,h:5}
+            ];
+        }
+
+        if(obs.obsType==="cactus"){
+            obsRects=[
+                {x:obs.x,y:obs.y+12,w:25,h:38},
+                {x:obs.x+12,y:obs.y,w:1,h:12}
+            ];
+        }
+
+        if(obs.obsType==="cactus3"){
+            obsRects=[
+                {x:obs.x+0,y:obs.y+17,w:29,h:30},
+                {x:obs.x+5,y:obs.y+0,w:13,h:14}
+            ];
+        }
+
+        if(obs.obsType==="bird"){
+            obsRects=[
+                {x:obs.x,y:obs.y+12,w:46,h:16}
+            ];
+        }
+
+        for(const a of dinoRects){
+            for(const b of obsRects){
+
+                if(
+                    a.x < b.x+b.w &&
+                    a.x+a.w > b.x &&
+                    a.y < b.y+b.h &&
+                    a.y+a.h > b.y
+                ){
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
     // ----------------------------------------------------------------
     //  DUST particles
     // ----------------------------------------------------------------

@@ -1,8 +1,3 @@
-// ================================================================
-//  DinoScene  –  Dino Run game
-//  Controller: controller.js (pinch = jump, fist = restart)
-//  Renderer:   Phaser 3 Arcade Physics
-// ================================================================
 
 class DinoScene extends Phaser.Scene {
 
@@ -24,8 +19,7 @@ class DinoScene extends Phaser.Scene {
         this.jumpForce    = -680;
 
         // dino ground Y — sprite.y khi đứng (origin 0.5, 0 = top-left anchor)
-        // dùng origin(0,0) để physics body khớp hoàn toàn với sprite.y
-        this.groundY      = 448;   // = GROUND_Y(510) - dinoHeight(62)
+        this.groundY      = 448;  
 
         // spawn timing (ms)
         this.spawnDelay   = 1600;
@@ -38,7 +32,6 @@ class DinoScene extends Phaser.Scene {
 
         // scroll
         this.groundTiles  = [];
-        this.GROUND_Y     = 465;
 
         // UI
         this.scoreText    = null;
@@ -146,20 +139,17 @@ class DinoScene extends Phaser.Scene {
             .setDepth(1);
 
             this.groundTiles.push(t);
+            this.ROAD_Y = 360 + t.height - 4;
         }
 
-        // ---- obstacle group ----
         this.obstacles = this.physics.add.group();
 
-        // ---- dino ----
-        // dùng origin(0,0) → sprite.y = top-left → body.y = sprite.y → không bị offset
-        // đặt dino sao cho đáy sprite = GROUND_Y
         const DINO_W = 44;
         const DINO_H = 47;
 
         this.dino = this.physics.add.sprite(
             -400,
-            this.GROUND_Y - DINO_H + 4,
+            this.ROAD_Y - DINO_H,
             "spriteSheet"
         )
         .setOrigin(0,0)
@@ -171,11 +161,7 @@ class DinoScene extends Phaser.Scene {
 
         this.dino.body.setSize(34, 39);
         this.dino.body.setOffset(5, 6);
-        this.dinoGroundY =
-        this.GROUND_Y -
-        this.dino.body.height -
-        this.dino.body.offset.y +
-        4;
+        this.dinoGroundY = this.ROAD_Y - DINO_H;
 
 
 
@@ -226,7 +212,7 @@ class DinoScene extends Phaser.Scene {
 
         // hint tag
         this.add.text(400, 560,
-            "Pinch = jump   •   Fist = restart after Game Over",
+            "",
             {
                 fontSize: "14px",
                 fontFamily: "monospace",
@@ -346,7 +332,7 @@ class DinoScene extends Phaser.Scene {
 
         const obs = this.obstacles.create(
             x,
-            this.GROUND_Y - 35 + 4,
+            this.ROAD_Y - 35 + 4,
             "spriteSheet"
         )
         .setOrigin(0,0)
@@ -382,7 +368,7 @@ class DinoScene extends Phaser.Scene {
 
         const obs = this.obstacles.create(
             x,
-            this.GROUND_Y - height[type] + 4,
+            this.ROAD_Y - height[type] + 4,
             "spriteSheet"
         )
         .setOrigin(0,0)
@@ -407,9 +393,9 @@ class DinoScene extends Phaser.Scene {
     }
     _spawnBird() {
         const heightOptions = [
-            this.GROUND_Y - 130,
-            this.GROUND_Y - 90,
-            this.GROUND_Y - 55
+            this.ROAD_Y - 130,
+            this.ROAD_Y - 90,
+            this.ROAD_Y - 55
         ];
         const y = Phaser.Math.RND.pick(heightOptions);
 
@@ -590,7 +576,7 @@ class DinoScene extends Phaser.Scene {
             this.dino.y >= this.dinoGroundY
         ){
             this.dino.y = this.dinoGroundY;
-            this.dino.body.velocity.y = 0;
+            this.dino.body.setVelocityY(0);
         }
         // ---- dino animation ----
         const onGround2 =
@@ -749,7 +735,7 @@ class DinoScene extends Phaser.Scene {
     _emitDust() {
         // dino origin(0,0) → center X = dino.x + width/2
         const x = this.dino.x + 14 + Phaser.Math.Between(-6, 6);
-        const y = this.GROUND_Y;
+        const y = this.ROAD_Y;
         const dust = this.add.image(x, y, "dust")
             .setAlpha(0.6)
             .setDepth(2);

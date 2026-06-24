@@ -580,17 +580,22 @@ class DinoScene extends Phaser.Scene {
 
     _spawnCloud() {
         const y = Phaser.Math.Between(50, 180);
-        const scale = Phaser.Math.FloatBetween(0.7,1.3);
-        cloud.setScale(scale);
         const spd = Phaser.Math.Between(40, 80);
-        const cloud = this.add.image(900, y, "cloud")
-            .setAlpha(0.75).setDepth(1);
-        this.tweens.add({
-            targets: cloud,
-            x: -120,
-            duration: (1020 / spd) * 1000,
-            onComplete: () => cloud.destroy()
-        });
+
+        const cloud = this.add.image(
+            900,
+            y,
+            "cloud"
+        )
+        .setAlpha(0.75)
+        .setDepth(1);
+
+        const scale = Phaser.Math.FloatBetween(
+            0.7,
+            1.3
+        );
+
+        cloud.setScale(scale);
     }
 
     // ----------------------------------------------------------------

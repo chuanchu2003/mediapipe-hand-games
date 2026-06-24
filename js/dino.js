@@ -151,14 +151,6 @@ class DinoScene extends Phaser.Scene {
         // ---- obstacle group ----
         this.obstacles = this.physics.add.group();
 
-        // ---- static ground collider (invisible) ----
-        // đặt ngay sát đường kẻ đất để physics body va chạm chính xác
-        this.groundCollider = this.physics.add.staticImage(
-            400, 360, null
-        ).setDisplaySize(800, 4).refreshBody();
-        // ẩn đi (đường kẻ đã được vẽ bằng rectangle riêng)
-        this.groundCollider.setVisible(false);
-
         // ---- dino ----
         // dùng origin(0,0) → sprite.y = top-left → body.y = sprite.y → không bị offset
         // đặt dino sao cho đáy sprite = GROUND_Y
@@ -179,8 +171,12 @@ class DinoScene extends Phaser.Scene {
 
         this.dino.body.setSize(34, 39);
         this.dino.body.setOffset(5, 6);
-        // va chạm với ground tĩnh
-        this.physics.add.collider(this.dino, this.groundCollider);
+        this.dinoGroundY =
+        this.GROUND_Y -
+        this.dino.body.height -
+        this.dino.body.offset.y +
+        4;
+
 
 
         // ---- score UI ----
@@ -267,9 +263,11 @@ class DinoScene extends Phaser.Scene {
         this.time.addEvent({
             delay: 3500,
             loop: true,
+            callback: this._spawnCloud,
             callbackScope: this
         });
         // seed one cloud immediately
+        this._spawnCloud();
     }
 
     // ----------------------------------------------------------------
@@ -580,21 +578,25 @@ class DinoScene extends Phaser.Scene {
         );
         // ---- jump input ----
         // dùng body.blocked.down (chính xác nhất với static collider)
-        const onGround = this.dino.body.blocked.down ||
-                         this.dino.body.touching.down;
+        const onGround =
+            this.dino.y >=
+            this.dinoGroundY - 4;
         if (this.controller && this.controller.isJumping("dino") && onGround) {
             this.dino.body.setVelocityY(this.jumpForce);
         }
 
-        // ---- safety clamp (phòng khi rơi qua ground) ----
-        const floorTop = this.GROUND_Y - 44;   // = groundY
-        if (this.dino.y > floorTop) {
-            this.dino.y = floorTop;
-            this.dino.body.reset(this.dino.x, floorTop);
+        if (
+            this.dino.body.velocity.y >= 0 &&
+            this.dino.y >= this.dinoGroundY
+        ){
+            this.dino.y = this.dinoGroundY;
+            this.dino.body.velocity.y = 0;
         }
-
         // ---- dino animation ----
-        const onGround2 = this.dino.body.blocked.down || this.dino.body.touching.down;
+        const onGround2 =
+            Math.abs(
+                this.dino.y - this.dinoGroundY
+            ) < 3;
         if (onGround2) {
             this.frameTick += delta;
             if (this.frameTick > 80) {
@@ -657,7 +659,10 @@ class DinoScene extends Phaser.Scene {
         });
 
         // ---- dust when running on ground ----
-        const onGround3 = this.dino.body.blocked.down || this.dino.body.touching.down;
+        const onGround3 =
+        Math.abs(
+            this.dino.y - this.dinoGroundY
+        ) < 3;
         if (onGround3 && this.gameStarted) {
             this.dustTimer += delta;
             if (this.dustTimer > 120) {

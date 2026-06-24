@@ -156,7 +156,7 @@ class DinoScene extends Phaser.Scene {
         .setCrop(677,2,44,47)
         .setDepth(3);
 
-        this.dino.body.setGravityY(this.gravity);
+        this.dino.body.setGravityY(0);
         this.dino.body.setCollideWorldBounds(false);
 
         this.dino.body.setSize(34, 39);
@@ -254,6 +254,31 @@ class DinoScene extends Phaser.Scene {
         });
         // seed one cloud immediately
         this._spawnCloud();
+
+        this.debugText = this.add.text(
+            5,
+            5,
+            "",
+            {
+                fontSize: "12px",
+                fontFamily: "monospace",
+                color: "#ff0000",
+                backgroundColor: "#ffffff"
+            }
+        )
+        .setDepth(9999)
+        .setScrollFactor(0);
+        this.debugGraphics = this.add.graphics();
+        this.debugGraphics.setDepth(9998);
+        console.log(
+            this.children.list.map(o=>({
+                type:o.type,
+                texture:o.texture?.key,
+                x:o.x,
+                y:o.y,
+                depth:o.depth
+            }))
+        );
     }
 
     // ----------------------------------------------------------------
@@ -541,12 +566,27 @@ class DinoScene extends Phaser.Scene {
 
         // ---- start on first pinch ----
         if (!this.gameStarted) {
-            if (this.controller && this.controller.isJumping("dino")) {
+
+            this.dino.x = -400;
+            this.dino.y = this.dinoGroundY;
+            this.dino.body.setVelocity(0,0);
+
+            if (
+                this.controller &&
+                this.controller.isJumping("dino")
+            ) {
+
+                this.dino.body.setGravityY(this.gravity);
+
                 this.gameStarted = true;
                 this.messageText.setVisible(false);
                 this.subText.setVisible(false);
-                this.dino.body.setVelocityY(this.jumpForce);
+
+                this.dino.body.setVelocityY(
+                    this.jumpForce
+                );
             }
+
             return;
         }
 
@@ -656,6 +696,58 @@ class DinoScene extends Phaser.Scene {
                 this._emitDust();
             }
         }
+        this.debugGraphics.clear();
+        this.debugGraphics.lineStyle(1,0xff0000);
+
+        const body = this.dino.body;
+
+        if(body){
+            this.debugGraphics.strokeRect(
+                body.x,
+                body.y,
+                body.width,
+                body.height
+            );
+        }
+
+        this.obstacles.getChildren().forEach(o=>{
+            if(o.body){
+                this.debugGraphics.strokeRect(
+                    o.body.x,
+                    o.body.y,
+                    o.body.width,
+                    o.body.height
+                );
+            }
+        });
+
+        const allObjects = this.children.list
+            .map(o=>{
+                const name =
+                    o.texture?.key ||
+                    o.type ||
+                    o.constructor.name;
+
+                return `${name} x=${Math.round(o.x)} y=${Math.round(o.y)}`;
+            })
+            .join("\n");
+
+        this.debugText.setText(
+        `DINO sprite x=${Math.round(this.dino.x)}
+        DINO body x=${Math.round(this.dino.body.x)}
+
+        ROAD_Y=${this.ROAD_Y}
+
+        Way count=${this.groundTiles.length}
+
+        ${this.groundTiles.map(
+        (t,i)=>`way${i}: x=${Math.round(t.x)} y=${Math.round(t.y)} visible=${t.visible}`
+        ).join("\n")}
+
+        ---------------------
+        Objects:
+        ${allObjects}`
+        );
     }
 
     _complexCollision(dino, obs) {
@@ -668,7 +760,7 @@ class DinoScene extends Phaser.Scene {
 
         let obsRects=[];
 
-        
+        /*
         if(this.debugRects){
             this.debugRects.clear();
         }
@@ -685,7 +777,7 @@ class DinoScene extends Phaser.Scene {
                 r.h
             );
         });
-            
+        */    
         if(obs.obsType==="mini"){
             obsRects=[
                 {x:obs.x,y:obs.y+5,w:17,h:30},

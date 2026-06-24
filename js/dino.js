@@ -668,7 +668,7 @@ class DinoScene extends Phaser.Scene {
 
         let obsRects=[];
 
-        /*
+        
         if(this.debugRects){
             this.debugRects.clear();
         }
@@ -685,7 +685,7 @@ class DinoScene extends Phaser.Scene {
                 r.h
             );
         });
-        */    
+            
         if(obs.obsType==="mini"){
             obsRects=[
                 {x:obs.x,y:obs.y+5,w:17,h:30},

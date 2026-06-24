@@ -38,7 +38,7 @@ class DinoScene extends Phaser.Scene {
 
         // scroll
         this.groundTiles  = [];
-        this.GROUND_Y     = 565;
+        this.GROUND_Y     = 465;
 
         // UI
         this.scoreText    = null;
@@ -89,161 +89,6 @@ class DinoScene extends Phaser.Scene {
         this._makeDustTexture();
     }
 
-    // ---- texture helpers ----
-
-    _makeDinoTextures() {
-        // Frame 0 – standing / mid-air
-        const g0 = this.make.graphics({ x: 0, y: 0, add: false });
-        // body
-        g0.fillStyle(0x333333); g0.fillRect(8, 0, 26, 30);
-        // head bump
-        g0.fillStyle(0x333333); g0.fillRect(20, 0, 18, 18);
-        // eye
-        g0.fillStyle(0xffffff); g0.fillRect(32, 4, 5, 5);
-        g0.fillStyle(0x000000); g0.fillRect(34, 5, 3, 3);
-        // legs – both down
-        g0.fillStyle(0x333333);
-        g0.fillRect(10, 28, 8, 16);
-        g0.fillRect(22, 28, 8, 16);
-        // tail
-        g0.fillRect(0, 10, 12, 8);
-        g0.generateTexture("dino0", 42, 44);
-        g0.destroy();
-
-        // Frame 1 – left leg forward
-        const g1 = this.make.graphics({ x: 0, y: 0, add: false });
-        g1.fillStyle(0x333333); g1.fillRect(8, 0, 26, 30);
-        g1.fillStyle(0x333333); g1.fillRect(20, 0, 18, 18);
-        g1.fillStyle(0xffffff); g1.fillRect(32, 4, 5, 5);
-        g1.fillStyle(0x000000); g1.fillRect(34, 5, 3, 3);
-        g1.fillStyle(0x333333);
-        g1.fillRect(8, 28, 8, 20);   // left leg long
-        g1.fillRect(22, 28, 8, 10);  // right leg short
-        g1.fillRect(0, 10, 12, 8);
-        g1.generateTexture("dino1", 42, 48);
-        g1.destroy();
-
-        // Frame 2 – right leg forward
-        const g2 = this.make.graphics({ x: 0, y: 0, add: false });
-        g2.fillStyle(0x333333); g2.fillRect(8, 0, 26, 30);
-        g2.fillStyle(0x333333); g2.fillRect(20, 0, 18, 18);
-        g2.fillStyle(0xffffff); g2.fillRect(32, 4, 5, 5);
-        g2.fillStyle(0x000000); g2.fillRect(34, 5, 3, 3);
-        g2.fillStyle(0x333333);
-        g2.fillRect(8,  28, 8, 10);  // left leg short
-        g2.fillRect(22, 28, 8, 20);  // right leg long
-        g2.fillRect(0, 10, 12, 8);
-        g2.generateTexture("dino2", 42, 48);
-        g2.destroy();
-
-        // Dead frame
-        const gd = this.make.graphics({ x: 0, y: 0, add: false });
-        gd.fillStyle(0x555555); gd.fillRect(8, 0, 26, 30);
-        gd.fillStyle(0x555555); gd.fillRect(20, 0, 18, 18);
-        gd.fillStyle(0xff4444); gd.fillRect(28, 3, 10, 8); // X eye
-        gd.fillStyle(0x222222); gd.fillRect(31, 5, 4, 4);
-        gd.fillStyle(0x555555);
-        gd.fillRect(10, 28, 8, 16);
-        gd.fillRect(22, 28, 8, 16);
-        gd.fillRect(0, 10, 12, 8);
-        gd.generateTexture("dinoDead", 42, 44);
-        gd.destroy();
-    }
-
-    _makeGroundTexture() {
-        const g = this.make.graphics({ x: 0, y: 0, add: false });
-        g.fillStyle(0x888888); g.fillRect(0, 0, 800, 4);
-        // pebble pattern
-        g.fillStyle(0xaaaaaa);
-        for (let i = 0; i < 30; i++) {
-            const x = (i * 37) % 800;
-            g.fillRect(x, 6, 6, 2);
-        }
-        g.fillStyle(0x999999);
-        for (let i = 0; i < 20; i++) {
-            const x = (i * 53 + 15) % 800;
-            g.fillRect(x, 10, 10, 2);
-        }
-        g.generateTexture("groundTile", 800, 14);
-        g.destroy();
-    }
-
-    _makeCactusTextures() {
-        // Small single cactus
-        const cs = this.make.graphics({ x: 0, y: 0, add: false });
-        cs.fillStyle(0x2d7a2d);
-        cs.fillRect(12, 0, 14, 60);   // main stem
-        cs.fillRect(0, 16, 12, 10);   // left arm
-        cs.fillRect(0, 6,  8,  10);   // left up
-        cs.fillRect(26, 20, 12, 10);  // right arm
-        cs.fillRect(30, 10, 8, 10);   // right up
-        // spikes
-        cs.fillStyle(0x1a5c1a);
-        cs.fillRect(11, 0, 2, 6);
-        cs.fillRect(25, 0, 2, 6);
-        cs.generateTexture("cactusS", 38, 60);
-        cs.destroy();
-
-        // Tall double cactus
-        const ct = this.make.graphics({ x: 0, y: 0, add: false });
-        ct.fillStyle(0x2d7a2d);
-        ct.fillRect(14, 0, 16, 80);
-        ct.fillRect(0,  24, 14, 12);
-        ct.fillRect(0,  12, 10, 12);
-        ct.fillRect(30, 30, 14, 12);
-        ct.fillRect(34, 18, 10, 12);
-        // second cactus next to it
-        ct.fillRect(54, 10, 12, 70);
-        ct.fillRect(42, 28, 12, 10);
-        ct.fillRect(66, 32, 12, 10);
-        ct.fillStyle(0x1a5c1a);
-        ct.fillRect(13, 0, 2, 8); ct.fillRect(29, 0, 2, 8);
-        ct.fillRect(53, 10, 2, 8); ct.fillRect(65, 10, 2, 8);
-        ct.generateTexture("cactusT", 80, 80);
-        ct.destroy();
-    }
-
-    _makeBirdTexture() {
-        // Frame A – wings up
-        const ba = this.make.graphics({ x: 0, y: 0, add: false });
-        ba.fillStyle(0x555566);
-        ba.fillRect(10, 12, 28, 12); // body
-        ba.fillRect(26, 6, 10, 8);   // head
-        ba.fillRect(36, 9, 6, 4);    // beak
-        ba.fillStyle(0xffffff); ba.fillRect(28, 7, 4, 4);
-        ba.fillStyle(0x000000); ba.fillRect(29, 8, 2, 2);
-        // wings up
-        ba.fillStyle(0x444455);
-        ba.fillRect(0, 0, 14, 10);   // left wing up
-        ba.fillRect(30, 0, 14, 10);  // right wing up
-        ba.generateTexture("birdA", 44, 30);
-        ba.destroy();
-
-        // Frame B – wings down
-        const bb = this.make.graphics({ x: 0, y: 0, add: false });
-        bb.fillStyle(0x555566);
-        bb.fillRect(10, 10, 28, 12);
-        bb.fillRect(26, 4,  10, 8);
-        bb.fillRect(36, 7,   6, 4);
-        bb.fillStyle(0xffffff); bb.fillRect(28, 5, 4, 4);
-        bb.fillStyle(0x000000); bb.fillRect(29, 6, 2, 2);
-        // wings down
-        bb.fillStyle(0x444455);
-        bb.fillRect(0, 18, 14, 10);
-        bb.fillRect(30, 18, 14, 10);
-        bb.generateTexture("birdB", 44, 30);
-        bb.destroy();
-    }
-
-    _makeCloudTexture() {
-        const g = this.make.graphics({ x: 0, y: 0, add: false });
-        g.fillStyle(0xdddddd, 0.85);
-        g.fillEllipse(40, 16, 80, 28);
-        g.fillEllipse(24, 20, 44, 20);
-        g.fillEllipse(62, 22, 40, 16);
-        g.generateTexture("cloud", 88, 36);
-        g.destroy();
-    }
 
     _makeDustTexture() {
         const g = this.make.graphics({ x: 0, y: 0, add: false });
@@ -294,7 +139,7 @@ class DinoScene extends Phaser.Scene {
         for(let i=0;i<2;i++){
             const t = this.add.image(
                 i*860,
-                510,
+                360,
                 "way"
             )
             .setOrigin(0,0)
@@ -309,7 +154,7 @@ class DinoScene extends Phaser.Scene {
         // ---- static ground collider (invisible) ----
         // đặt ngay sát đường kẻ đất để physics body va chạm chính xác
         this.groundCollider = this.physics.add.staticImage(
-            400, this.GROUND_Y + 2, null
+            400, 360, null
         ).setDisplaySize(800, 4).refreshBody();
         // ẩn đi (đường kẻ đã được vẽ bằng rectangle riêng)
         this.groundCollider.setVisible(false);
@@ -352,7 +197,7 @@ class DinoScene extends Phaser.Scene {
 
         this.speedDisplay = this.add.text(
             430,
-            600,
+            550,
             "Speed: 0",
             {
                 fontSize:"24px",
@@ -422,11 +267,9 @@ class DinoScene extends Phaser.Scene {
         this.time.addEvent({
             delay: 3500,
             loop: true,
-            callback: this._spawnCloud,
             callbackScope: this
         });
         // seed one cloud immediately
-        this._spawnCloud();
     }
 
     // ----------------------------------------------------------------

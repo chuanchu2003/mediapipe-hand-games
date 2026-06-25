@@ -265,14 +265,14 @@ getDinoHitboxes(){
   return [
 
     {
-      x:left + 15*S,
-      y:top + 0*S,
+      x:left + 0*S,
+      y:top + 15*S,
       w:32*S,
       h:20*S
     },
     {
-      x:left + 0*S,
-      y:top + 16*S,
+      x:left + 16*S,
+      y:top + 0*S,
       w:12*S,
       h:35*S
     },

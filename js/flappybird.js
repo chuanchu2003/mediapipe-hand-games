@@ -122,7 +122,7 @@ class BirdScene extends Phaser.Scene {
         this.bird.setVelocityY(0);
         this.anims.create({
 
-            key: "fly",
+            key: "birdFly",
 
             frames: [
 
@@ -137,7 +137,7 @@ class BirdScene extends Phaser.Scene {
             repeat: -1
 
         });
-        this.bird.play("fly");
+        this.bird.play("birdFly");
         if (!this.debugNoCollision) {
 
             this.physics.add.collider(
@@ -190,26 +190,34 @@ class BirdScene extends Phaser.Scene {
 
         this.time.addEvent({
 
-            delay: 1500,
+                delay: 1500,
 
-            loop: true,
+                loop: true,
 
-            callback: () => {
+                callback: () => {
 
-                if (
-                    this.gameStarted &&
-                    !this.gameOverFlag
-                ) {
+                    if (
+                        this.gameStarted &&
+                        !this.gameOverFlag
+                    ) {
 
-                    this.spawnPipe();
+                        this.spawnPipe();
+
+                    }
 
                 }
 
-            }
+            });
 
-        });
+        this.mouseFlap = false;
 
+    this.input.on(
+    "pointerdown",
+    () => {
+        this.mouseFlap = true;
     }
+    );
+}
 
     spawnPipe() {
 
@@ -278,17 +286,24 @@ class BirdScene extends Phaser.Scene {
 
         if (this.gameOverFlag) {
 
-            if (
+            const restartPressed =
+            (
                 this.controller &&
                 this.controller.justClosedFist()
-            ) {
+            )
+            ||
+            this.mouseFlap;
+
+            if(restartPressed){
 
                 this.scene.restart({
                     controller:
-                        this.controller
+                    this.controller
                 });
 
             }
+
+            this.mouseFlap = false;
 
             return;
         }
@@ -301,16 +316,25 @@ class BirdScene extends Phaser.Scene {
 
         if (this.controller) {
 
+        const flapPressed =
+        (
+            this.controller &&
+            this.controller.isJumping("flappy")
+        )
+        ||
+        this.mouseFlap;
+
         if (
             !this.gameStarted &&
-            this.controller.isJumping("flappy")
-        ) {
+            flapPressed
+        ){
 
             this.gameStarted = true;
 
             this.bird.setGravityY(800);
 
             this.bird.setVelocityY(-350);
+            this.mouseFlap = false;
 
             if (this.instructionText) {
                 this.instructionText.destroy();
@@ -319,10 +343,11 @@ class BirdScene extends Phaser.Scene {
         }
         else if (
             this.gameStarted &&
-            this.controller.isJumping("flappy")
-        ) {
+            flapPressed
+        ){
 
             this.bird.setVelocityY(-350);
+            this.mouseFlap = false;
 
         }
 

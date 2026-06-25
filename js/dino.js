@@ -120,6 +120,14 @@ class DinoScene extends Phaser.Scene {
     this.nextSpawnDistance = 900;
     this.distanceCounter = 0;
     this.lastSpawnWasFly = false;
+    this.mouseJump = false;
+
+    this.input.on(
+    "pointerdown",
+    () => {
+        this.mouseJump = true;
+    }
+    );
   }
 
   createGround() {
@@ -726,15 +734,19 @@ updateObstacles(delta){
       this.controller.isJumping &&
       this.controller.isJumping("dino");
 
+    const jumpPressed =
+        gestureJump ||
+        this.mouseJump;
+
     if (
       jumpPressed &&
       this.onGround
     ) {
-
-      this.dinoVelocityY =
+        this.mouseJump = false;
+        this.dinoVelocityY =
         this.jumpVelocity;
 
-      this.onGround = false;
+        this.onGround = false;
     }
 
     const dt = delta / 1000;

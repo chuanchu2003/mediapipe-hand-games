@@ -271,7 +271,7 @@ getDinoHitboxes(){
       h:20*S
     },
     {
-      x:left + 16*S,
+      x:left + 20*S,
       y:top + 0*S,
       w:12*S,
       h:35*S

@@ -216,14 +216,19 @@ class DinoScene extends Phaser.Scene {
   );
 
   // hitbox dino
-  const dinoBox = this.getDinoHitbox();
+    const dinoBoxes =
+    this.getDinoHitboxes();
 
-  this.hitboxGraphics.strokeRect(
-    dinoBox.x,
-    dinoBox.y,
-    dinoBox.w,
-    dinoBox.h
-  );
+    dinoBoxes.forEach(box=>{
+
+    this.hitboxGraphics.strokeRect(
+        box.x,
+        box.y,
+        box.w,
+        box.h
+    );
+
+    });
 
   // hitbox obstacle
   this.obstacles.forEach(obs=>{
@@ -245,25 +250,42 @@ class DinoScene extends Phaser.Scene {
   });
 
 }
-getDinoHitbox(){
+getDinoHitboxes(){
 
-  const w =
-    44 *
-    this.scaleFactor;
+  const S = this.scaleFactor;
 
-  const h =
-    47 *
-    this.scaleFactor;
+  const left =
+    this.dino.x -
+    this.dino.displayWidth/2;
 
-  return {
+  const top =
+    this.dino.y -
+    this.dino.displayHeight/2;
 
-    x:this.dino.x - w/2 + 10,
-    y:this.dino.y - h/2 + 8,
+  return [
 
-    w:w - 20,
-    h:h - 16
+    {
+      x:left + 0*S,
+      y:top + 0*S,
+      w:32*S,
+      h:35*S
+    },
 
-  };
+    {
+      x:left + 32*S,
+      y:top + 0*S,
+      w:12*S,
+      h:19*S
+    },
+
+    {
+      x:left + 8*S,
+      y:top + 35*S,
+      w:18*S,
+      h:12*S
+    }
+
+  ];
 
 }
 toggleDebugHitbox(){
@@ -439,6 +461,7 @@ spawnObstacle(type){
       0,
       key
     );
+    sprite.obsType = "cactusmini";
 
   }
   else if(type==="big"){
@@ -455,6 +478,11 @@ spawnObstacle(type){
       0,
       key
     );
+    if(key==="cactus3"){
+        sprite.obsType="cactus3";
+    }else{
+        sprite.obsType="cactus";
+    }
 
   }
   else{
@@ -464,7 +492,7 @@ spawnObstacle(type){
       0,
       "flydino1"
     );
-
+    sprite.obsType = "flydino";
     sprite.play("fly");
 
   }
@@ -663,4 +691,97 @@ updateObstacles(delta){
       this.onGround = true;
     }
   }
+  getObstacleHitboxes(obs){
+
+    const S = this.scaleFactor;
+
+    const left =
+        obs.x - obs.displayWidth/2;
+
+    const top =
+        obs.y - obs.displayHeight/2;
+
+    if(obs.obsType==="cactusmini"){
+
+        return [
+
+        {
+            x:left + 0*S,
+            y:top + 5*S,
+            w:17*S,
+            h:30*S
+        },
+
+        {
+            x:left + 5*S,
+            y:top + 0*S,
+            w:7*S,
+            h:5*S
+        }
+
+        ];
+
+    }
+
+    if(obs.obsType==="cactus"){
+
+        return [
+
+        {
+            x:left + 0*S,
+            y:top + 12*S,
+            w:25*S,
+            h:38*S
+        },
+
+        {
+            x:left + 12*S,
+            y:top + 0*S,
+            w:1*S,
+            h:12*S
+        }
+
+        ];
+
+    }
+
+    if(obs.obsType==="cactus3"){
+
+        return [
+
+        {
+            x:left + 0*S,
+            y:top + 17*S,
+            w:29*S,
+            h:30*S
+        },
+
+        {
+            x:left + 5*S,
+            y:top + 0*S,
+            w:13*S,
+            h:14*S
+        }
+
+        ];
+
+    }
+
+    if(obs.obsType==="flydino"){
+
+        return [
+
+        {
+            x:left + 0*S,
+            y:top + 12*S,
+            w:46*S,
+            h:16*S
+        }
+
+        ];
+
+    }
+
+    return [];
+    }
 }

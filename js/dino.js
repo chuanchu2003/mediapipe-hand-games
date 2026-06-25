@@ -17,6 +17,7 @@ class DinoScene extends Phaser.Scene {
     this.isGameOver = false;
 
     this.invincible = false;
+    this.invincibleTimer = 0;
 
     this.groundY = 500;
 
@@ -38,8 +39,8 @@ class DinoScene extends Phaser.Scene {
     this.cloudTimer = 0;
 
     this.scaleFactor = 2;
-    this.debugHitbox = true;
-    this.noCollision = true;
+    this.debugHitbox = false;
+    this.noCollision = false;
 
     this.hitboxGraphics = null;
     this.baseGap = 900;
@@ -66,6 +67,7 @@ class DinoScene extends Phaser.Scene {
     this.gameStarted = true;
     this.isGameOver = false;
     this.invincible = false;
+    this.invincibleTimer = 0;
 
     this.obstacles = [];
     this.clouds = [];
@@ -115,6 +117,9 @@ class DinoScene extends Phaser.Scene {
     this.cloudTimer = 0;
     this.hitboxGraphics =
     this.add.graphics();
+    this.nextSpawnDistance = 900;
+    this.distanceCounter = 0;
+    this.lastSpawnWasFly = false;
   }
 
   createGround() {
@@ -340,8 +345,21 @@ toggleNoCollision(){
 
   update(time, delta) {
 
-    if (this.isGameOver) {
-      return;
+    if(this.isGameOver){
+
+    const restartPressed =
+        this.controller &&
+        this.controller.isJumping &&
+        this.controller.isJumping("dino");
+
+    if(restartPressed){
+
+        this.restartGame();
+
+    }
+
+    return;
+
     }
 
     if (this.controller) {
@@ -355,6 +373,8 @@ toggleNoCollision(){
     this.updateObstacles(delta);
     this.updateScore(delta);
     this.drawHitboxes();
+    this.updateInvincible(delta);
+    this.checkCollision();
   }
 
   updateGround(delta) {
@@ -740,6 +760,168 @@ updateObstacles(delta){
       this.onGround = true;
     }
   }
+  rectOverlap(a,b){
+
+    return (
+        a.x < b.x + b.w &&
+        a.x + a.w > b.x &&
+        a.y < b.y + b.h &&
+        a.y + a.h > b.y
+    );
+
+    }
+
+    checkCollision(){
+
+    if(this.noCollision) return;
+
+    if(this.invincible) return;
+
+    const dinoBoxes =
+        this.getDinoHitboxes();
+
+    for(const obs of this.obstacles){
+
+        const obsBoxes =
+        this.getObstacleHitboxes(obs);
+
+        for(const dinoBox of dinoBoxes){
+
+        for(const obsBox of obsBoxes){
+
+            if(
+            this.rectOverlap(
+                dinoBox,
+                obsBox
+            )
+            ){
+
+            this.loseLife();
+
+            return;
+
+            }
+
+        }
+
+        }
+
+    }
+
+    }
+
+    loseLife(){
+
+    this.lives--;
+
+    const hearts =
+        "❤️".repeat(this.lives) +
+        "🤍".repeat(3-this.lives);
+
+    this.livesText.setText(
+        hearts
+    );
+
+    if(this.lives <= 0){
+
+        this.gameOver();
+
+        return;
+
+    }
+
+    this.invincible = true;
+
+    this.invincibleTimer = 2000;
+
+    }
+
+    updateInvincible(delta){
+
+    if(!this.invincible)
+        return;
+
+    this.invincibleTimer -= delta;
+
+    this.dino.visible =
+        Math.floor(
+        this.invincibleTimer / 100
+        ) % 2 === 0;
+
+    if(this.invincibleTimer <= 0){
+
+        this.invincible = false;
+
+
+        this.dino.visible = true;
+
+    }
+
+  }
+  gameOver(){
+
+    this.isGameOver = true;
+
+    this.dino.setTexture(
+        "dinodie"
+    );
+
+    const W =
+        this.sys.game.config.width;
+
+    const H =
+        this.sys.game.config.height;
+
+    this.gameOverText =
+        this.add.text(
+        W/2,
+        H/2 - 120,
+        "GAME OVER",
+        {
+            fontSize:"48px",
+            color:"#000",
+            fontStyle:"bold"
+        }
+        )
+        .setOrigin(0.5);
+
+    this.restartButton =
+        this.add.image(
+        W/2,
+        H/2,
+        "restart"
+        )
+        .setScale(2)
+        .setInteractive();
+
+    this.restartHint =
+        this.add.text(
+        W/2,
+        H/2 + 55,
+        "👊 Nắm tay để chơi lại",
+        {
+            fontSize:"20px",
+            color:"#000"
+        }
+        )
+        .setOrigin(0.5);
+
+    this.restartButton.on(
+        "pointerdown",
+        ()=>{
+        this.restartGame();
+        }
+    );
+
+  }
+  restartGame(){
+
+    this.scene.restart({
+        controller:
+        this.controller
+    });
+
+  }  
   getObstacleHitboxes(obs){
 
     const S = this.scaleFactor;

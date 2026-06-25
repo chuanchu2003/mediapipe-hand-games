@@ -265,12 +265,17 @@ getDinoHitboxes(){
   return [
 
     {
-      x:left + 0*S,
+      x:left + 15*S,
       y:top + 0*S,
       w:32*S,
+      h:20*S
+    },
+    {
+      x:left + 0*S,
+      y:top + 16*S,
+      w:12*S,
       h:35*S
     },
-
     {
       x:left + 32*S,
       y:top + 0*S,
@@ -609,8 +614,11 @@ updateObstacles(delta){
               this.scaleFactor
             );
 
+            clone.obsType =
+            second.obsType;
+
             clone.obstacleType =
-              second.obstacleType;
+            second.obstacleType;
 
             this.obstacles.push(clone);
 

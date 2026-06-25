@@ -16,7 +16,7 @@ class DinoScene extends Phaser.Scene {
 
     this.invincible = false;
 
-    this.groundY = 700;
+    this.groundY = 500;
 
     this.dino = null;
 
@@ -35,7 +35,7 @@ class DinoScene extends Phaser.Scene {
     this.spawnTimer = 0;
     this.cloudTimer = 0;
 
-    this.scaleFactor = 2.5;
+    this.scaleFactor = 2;
   }
 
   init(data) {
@@ -152,7 +152,7 @@ class DinoScene extends Phaser.Scene {
 
     this.gravity = 2200;
 
-    this.jumpVelocity = -950;
+    this.jumpVelocity = -1000;
 
     this.onGround = true;
   }

@@ -729,14 +729,14 @@ updateObstacles(delta){
 }
   updateJump(delta) {
 
-    const jumpPressed =
-      this.controller &&
-      this.controller.isJumping &&
-      this.controller.isJumping("dino");
+    const gestureJump =
+    this.controller &&
+    this.controller.isJumping &&
+    this.controller.isJumping("dino");
 
     const jumpPressed =
-        gestureJump ||
-        this.mouseJump;
+    gestureJump ||
+    this.mouseJump;
 
     if (
       jumpPressed &&

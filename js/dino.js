@@ -2,7 +2,9 @@ class DinoScene extends Phaser.Scene {
 
   constructor() {
     super({ key: "DinoScene" });
-
+    this.lastSpawnWasFly = false;
+    this.nextSpawnDistance = 900;
+    this.distanceCounter = 0;
     this.controller = null;
 
     this.score = 0;
@@ -40,6 +42,8 @@ class DinoScene extends Phaser.Scene {
     this.noCollision = true;
 
     this.hitboxGraphics = null;
+    this.baseGap = 900;
+    this.gapScaleBonus = 1.3;
   }
 
   init(data) {
@@ -419,7 +423,23 @@ updateClouds(delta){
 
   this.cloudTimer += delta;
 
-  if(this.cloudTimer > 2500){
+  const speedRatio =
+  this.speed / 10;
+
+    let cloudMultiplier =
+    1 +
+    (speedRatio-1)*1.3;
+
+    cloudMultiplier =
+    Math.min(
+        2,
+        cloudMultiplier
+    );
+
+    const cloudGap =
+    2500 *
+    cloudMultiplier;
+  if(this.cloudTimer > cloudGap){
 
     this.cloudTimer = 0;
 
@@ -542,18 +562,19 @@ positionObstacle(obs){
 }
 updateObstacles(delta){
 
-  this.spawnTimer += delta;
+  const move =
+    this.baseWorldSpeed *
+    (1 + this.score/3000) *
+    (delta/1000);
 
-  const minGap =
-    1100 -
-    Math.min(
-      500,
-      Math.floor(this.score)
-    );
+  this.distanceCounter += move;
 
-  if(this.spawnTimer > minGap){
+  if(
+    this.distanceCounter >
+    this.nextSpawnDistance
+  ){
 
-    this.spawnTimer = 0;
+    this.distanceCounter = 0;
 
     const scoreInt =
       Math.floor(this.score);
@@ -562,50 +583,49 @@ updateObstacles(delta){
 
     if(
       scoreInt >= 300 &&
-      r < 0.2
+      r < 0.2 &&
+      !this.lastSpawnWasFly
     ){
 
       this.spawnObstacle("fly");
+
+      this.lastSpawnWasFly = true;
 
     }
     else{
 
       const type =
-        Math.random()<0.5
+        Math.random() < 0.5
         ? "mini"
         : "big";
 
       this.spawnObstacle(type);
 
-      // đôi cactus
+      this.lastSpawnWasFly = false;
+
+      // cactus đôi
       if(
         scoreInt >= 100 &&
         Math.random() < 0.25
       ){
 
-        this.time.delayedCall(
-          50,
-          ()=>{
+        const second =
+          this.obstacles[
+            this.obstacles.length-1
+          ];
 
-            const second =
-              this.obstacles[
-                this.obstacles.length-1
-              ];
+        if(second){
 
-            if(!second) return;
+          const key =
+            second.texture.key;
 
-            const key =
-              second.texture.key;
-
-            // không cho cactus3 đôi
-            if(key==="cactus3")
-              return;
+          if(key !== "cactus3"){
 
             const clone =
               this.add.image(
                 second.x +
                 second.displayWidth +
-                4,
+                4 * this.scaleFactor,
                 second.y,
                 key
               );
@@ -615,26 +635,47 @@ updateObstacles(delta){
             );
 
             clone.obsType =
-            second.obsType;
+              second.obsType;
 
             clone.obstacleType =
-            second.obstacleType;
+              second.obstacleType;
 
-            this.obstacles.push(clone);
+            this.obstacles.push(
+              clone
+            );
 
           }
-        );
+
+        }
 
       }
 
     }
 
-  }
+    // ===== tính khoảng cách cho lần spawn tiếp theo =====
 
-  const move =
-    this.baseWorldSpeed *
-    (1 + this.score/3000) *
-    (delta/1000);
+    const speedRatio =
+      this.speed / 10;
+
+    let gapMultiplier =
+      1 +
+      (speedRatio - 1) * 1.3;
+
+    // giới hạn tối đa x2
+
+    gapMultiplier =
+      Math.min(
+        2,
+        gapMultiplier
+      );
+
+    this.nextSpawnDistance =
+      Phaser.Math.Between(
+        800,
+        1100
+      ) * gapMultiplier;
+
+  }
 
   for(
     let i=this.obstacles.length-1;

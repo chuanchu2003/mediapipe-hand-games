@@ -1,74 +1,35 @@
-// ================================================================
-//  DinoScene  –  Dino Run game
-//  Controller: controller.js (pinch = jump, fist = restart)
-//  Renderer:   Phaser 3 Arcade Physics
-// ================================================================
+/*
+ * DinoScene — Google T-Rex clone
+ *
+ * Asset dimensions (1x, scale ×2 in-game):
+ *   dino1-5, dinodie : 44 × 47
+ *   cactus1-3        : 25-29 × 47-50
+ *   cactusmini1-3    : 17 × 35
+ *   bird1-2          : 46 × 40
+ *   cloud            : 46 × 13
+ *   restart          : 36 × 32
+ *   offline-sprite   : 1204 × 68  (ground texture strip)
+ *
+ * Controller API used:
+ *   setControlMode("pinch") + resetGestureState()  — in init()
+ *   isJumping("dino")                              — pinch held, 80ms interval
+ *   justClosedFist()                               — one-shot fist for restart
+ */
 
 class DinoScene extends Phaser.Scene {
 
+    // ─────────────────────────────────────────────────────────────────
+    //  Lifecycle
+    // ─────────────────────────────────────────────────────────────────
+
     constructor() {
         super({ key: "DinoScene" });
-
         this.controller = null;
-
-        // game state
-        this.gameStarted  = false;
-        this.gameOver     = false;
-        this.score        = 0;
-        this.hiScore      = 0;
-
-        // physics tuning
-        this.baseSpeed    = 320;
-        this.speed        = 320;
-        this.gravity      = 1400;
-        this.jumpForce    = -680;
-
-        // dino ground Y — sprite.y khi đứng (origin 0.5, 0 = top-left anchor)
-        // dùng origin(0,0) để physics body khớp hoàn toàn với sprite.y
-        this.groundY      = 448;   // = GROUND_Y(510) - dinoHeight(62)
-
-        // spawn timing (ms)
-        this.spawnDelay   = 1600;
-        this.minDelay     = 750;
-
-        // visuals
-        this.dino         = null;
-        this.obstacles    = null;
-        this.clouds       = [];
-
-        // scroll
-        this.groundTiles  = [];
-        this.GROUND_Y     = 510;
-
-        // UI
-        this.scoreText    = null;
-        this.hiScoreText  = null;
-        this.messageText  = null;
-        this.subText      = null;
-
-        // dino sprite frames
-        this.dinoFrame    = 0;
-        this.frameTick    = 0;
-
-        // dust particles
-        this.dustTimer    = 0;
-
-        // flash effect on hit
-        this.flashTimer   = 0;
     }
 
-    // ----------------------------------------------------------------
-    //  INIT  – receives controller from main.js
-    // ----------------------------------------------------------------
     init(data) {
-        this.controller  = data.controller;
-
-        this.gameStarted = false;
-        this.gameOver    = false;
-        this.score       = 0;
-        this.speed       = this.baseSpeed;
-        this.spawnDelay  = 1600;
-        this.flashTimer  = 0;
+        this.controller = data.controller;
+        this.hiScore    = data.hiScore || 0;
 
         if (this.controller) {
             this.controller.setControlMode("pinch");
@@ -76,579 +37,383 @@ class DinoScene extends Phaser.Scene {
         }
     }
 
-    // ----------------------------------------------------------------
-    //  PRELOAD  – generate textures with Phaser graphics API
-    // ----------------------------------------------------------------
     preload() {
-        this._makeDinoTextures();
-        this._makeGroundTexture();
-        this._makeCactusTextures();
-        this._makeBirdTexture();
-        this._makeCloudTexture();
-        this._makeDustTexture();
+        // Dino
+        this.load.image("dino1",       "images/dino1.png");
+        this.load.image("dino2",       "images/dino2.png");
+        this.load.image("dino3",       "images/dino3.png");
+        this.load.image("dino4",       "images/dino4.png");
+        this.load.image("dino5",       "images/dino5.png");
+        this.load.image("dinodie",     "images/dinodie.png");
+        // Large cacti
+        this.load.image("cactus1",     "images/cactus1.png");
+        this.load.image("cactus2",     "images/cactus2.png");
+        this.load.image("cactus3",     "images/cactus3.png");
+        // Small cacti
+        this.load.image("cactusmini1", "images/cactusmini1.png");
+        this.load.image("cactusmini2", "images/cactusmini2.png");
+        this.load.image("cactusmini3", "images/cactusmini3.png");
+        // Bird
+        this.load.image("dino-bird1",  "images/bird1.png");
+        this.load.image("dino-bird2",  "images/bird2.png");
+        // Misc
+        this.load.image("cloud",       "images/cloud.png");
+        this.load.image("restart",     "images/restart.png");
+        this.load.image("gndstrip",    "images/offline-sprite-1x.png");
     }
 
-    // ---- texture helpers ----
-
-    _makeDinoTextures() {
-        // Frame 0 – standing / mid-air
-        const g0 = this.make.graphics({ x: 0, y: 0, add: false });
-        // body
-        g0.fillStyle(0x333333); g0.fillRect(8, 0, 26, 30);
-        // head bump
-        g0.fillStyle(0x333333); g0.fillRect(20, 0, 18, 18);
-        // eye
-        g0.fillStyle(0xffffff); g0.fillRect(32, 4, 5, 5);
-        g0.fillStyle(0x000000); g0.fillRect(34, 5, 3, 3);
-        // legs – both down
-        g0.fillStyle(0x333333);
-        g0.fillRect(10, 28, 8, 16);
-        g0.fillRect(22, 28, 8, 16);
-        // tail
-        g0.fillRect(0, 10, 12, 8);
-        g0.generateTexture("dino0", 42, 44);
-        g0.destroy();
-
-        // Frame 1 – left leg forward
-        const g1 = this.make.graphics({ x: 0, y: 0, add: false });
-        g1.fillStyle(0x333333); g1.fillRect(8, 0, 26, 30);
-        g1.fillStyle(0x333333); g1.fillRect(20, 0, 18, 18);
-        g1.fillStyle(0xffffff); g1.fillRect(32, 4, 5, 5);
-        g1.fillStyle(0x000000); g1.fillRect(34, 5, 3, 3);
-        g1.fillStyle(0x333333);
-        g1.fillRect(8, 28, 8, 20);   // left leg long
-        g1.fillRect(22, 28, 8, 10);  // right leg short
-        g1.fillRect(0, 10, 12, 8);
-        g1.generateTexture("dino1", 42, 48);
-        g1.destroy();
-
-        // Frame 2 – right leg forward
-        const g2 = this.make.graphics({ x: 0, y: 0, add: false });
-        g2.fillStyle(0x333333); g2.fillRect(8, 0, 26, 30);
-        g2.fillStyle(0x333333); g2.fillRect(20, 0, 18, 18);
-        g2.fillStyle(0xffffff); g2.fillRect(32, 4, 5, 5);
-        g2.fillStyle(0x000000); g2.fillRect(34, 5, 3, 3);
-        g2.fillStyle(0x333333);
-        g2.fillRect(8,  28, 8, 10);  // left leg short
-        g2.fillRect(22, 28, 8, 20);  // right leg long
-        g2.fillRect(0, 10, 12, 8);
-        g2.generateTexture("dino2", 42, 48);
-        g2.destroy();
-
-        // Dead frame
-        const gd = this.make.graphics({ x: 0, y: 0, add: false });
-        gd.fillStyle(0x555555); gd.fillRect(8, 0, 26, 30);
-        gd.fillStyle(0x555555); gd.fillRect(20, 0, 18, 18);
-        gd.fillStyle(0xff4444); gd.fillRect(28, 3, 10, 8); // X eye
-        gd.fillStyle(0x222222); gd.fillRect(31, 5, 4, 4);
-        gd.fillStyle(0x555555);
-        gd.fillRect(10, 28, 8, 16);
-        gd.fillRect(22, 28, 8, 16);
-        gd.fillRect(0, 10, 12, 8);
-        gd.generateTexture("dinoDead", 42, 44);
-        gd.destroy();
-    }
-
-    _makeGroundTexture() {
-        const g = this.make.graphics({ x: 0, y: 0, add: false });
-        g.fillStyle(0x888888); g.fillRect(0, 0, 800, 4);
-        // pebble pattern
-        g.fillStyle(0xaaaaaa);
-        for (let i = 0; i < 30; i++) {
-            const x = (i * 37) % 800;
-            g.fillRect(x, 6, 6, 2);
-        }
-        g.fillStyle(0x999999);
-        for (let i = 0; i < 20; i++) {
-            const x = (i * 53 + 15) % 800;
-            g.fillRect(x, 10, 10, 2);
-        }
-        g.generateTexture("groundTile", 800, 14);
-        g.destroy();
-    }
-
-    _makeCactusTextures() {
-        // Small single cactus
-        const cs = this.make.graphics({ x: 0, y: 0, add: false });
-        cs.fillStyle(0x2d7a2d);
-        cs.fillRect(12, 0, 14, 60);   // main stem
-        cs.fillRect(0, 16, 12, 10);   // left arm
-        cs.fillRect(0, 6,  8,  10);   // left up
-        cs.fillRect(26, 20, 12, 10);  // right arm
-        cs.fillRect(30, 10, 8, 10);   // right up
-        // spikes
-        cs.fillStyle(0x1a5c1a);
-        cs.fillRect(11, 0, 2, 6);
-        cs.fillRect(25, 0, 2, 6);
-        cs.generateTexture("cactusS", 38, 60);
-        cs.destroy();
-
-        // Tall double cactus
-        const ct = this.make.graphics({ x: 0, y: 0, add: false });
-        ct.fillStyle(0x2d7a2d);
-        ct.fillRect(14, 0, 16, 80);
-        ct.fillRect(0,  24, 14, 12);
-        ct.fillRect(0,  12, 10, 12);
-        ct.fillRect(30, 30, 14, 12);
-        ct.fillRect(34, 18, 10, 12);
-        // second cactus next to it
-        ct.fillRect(54, 10, 12, 70);
-        ct.fillRect(42, 28, 12, 10);
-        ct.fillRect(66, 32, 12, 10);
-        ct.fillStyle(0x1a5c1a);
-        ct.fillRect(13, 0, 2, 8); ct.fillRect(29, 0, 2, 8);
-        ct.fillRect(53, 10, 2, 8); ct.fillRect(65, 10, 2, 8);
-        ct.generateTexture("cactusT", 80, 80);
-        ct.destroy();
-    }
-
-    _makeBirdTexture() {
-        // Frame A – wings up
-        const ba = this.make.graphics({ x: 0, y: 0, add: false });
-        ba.fillStyle(0x555566);
-        ba.fillRect(10, 12, 28, 12); // body
-        ba.fillRect(26, 6, 10, 8);   // head
-        ba.fillRect(36, 9, 6, 4);    // beak
-        ba.fillStyle(0xffffff); ba.fillRect(28, 7, 4, 4);
-        ba.fillStyle(0x000000); ba.fillRect(29, 8, 2, 2);
-        // wings up
-        ba.fillStyle(0x444455);
-        ba.fillRect(0, 0, 14, 10);   // left wing up
-        ba.fillRect(30, 0, 14, 10);  // right wing up
-        ba.generateTexture("birdA", 44, 30);
-        ba.destroy();
-
-        // Frame B – wings down
-        const bb = this.make.graphics({ x: 0, y: 0, add: false });
-        bb.fillStyle(0x555566);
-        bb.fillRect(10, 10, 28, 12);
-        bb.fillRect(26, 4,  10, 8);
-        bb.fillRect(36, 7,   6, 4);
-        bb.fillStyle(0xffffff); bb.fillRect(28, 5, 4, 4);
-        bb.fillStyle(0x000000); bb.fillRect(29, 6, 2, 2);
-        // wings down
-        bb.fillStyle(0x444455);
-        bb.fillRect(0, 18, 14, 10);
-        bb.fillRect(30, 18, 14, 10);
-        bb.generateTexture("birdB", 44, 30);
-        bb.destroy();
-    }
-
-    _makeCloudTexture() {
-        const g = this.make.graphics({ x: 0, y: 0, add: false });
-        g.fillStyle(0xdddddd, 0.85);
-        g.fillEllipse(40, 16, 80, 28);
-        g.fillEllipse(24, 20, 44, 20);
-        g.fillEllipse(62, 22, 40, 16);
-        g.generateTexture("cloud", 88, 36);
-        g.destroy();
-    }
-
-    _makeDustTexture() {
-        const g = this.make.graphics({ x: 0, y: 0, add: false });
-        g.fillStyle(0xbbbbbb, 0.7);
-        g.fillCircle(4, 4, 4);
-        g.generateTexture("dust", 8, 8);
-        g.destroy();
-    }
-
-    // ----------------------------------------------------------------
-    //  CREATE
-    // ----------------------------------------------------------------
     create() {
+        // ── Game constants ────────────────────────────────────────────
+        this.SCALE       = 2;
+        this.GROUND_Y    = 500;   // y where dino feet rest (origin bottom)
+        this.DINO_X      = 80;
+        this.GRAVITY     = 2400;
+        // J=700 → window above large cactus (Δt) = 0.417s
+        // BASE_SPEED: Δt > 2-cactus danger (0.391s) ✓  — Δt < 3-cactus danger (0.566s) ✓
+        // MAX_SPEED:  Δt > 3-cactus danger (0.165s) ✓
+        this.JUMP_VEL    = -900;
+        this.BASE_SPEED  = 320;
+        this.MAX_SPEED   = 1100;
+
+        // ── State ──────────────────────────────────────────────────────
         this.gameStarted = false;
-        this.gameOver    = false;
+        this.isDead      = false;
         this.score       = 0;
-        this.speed       = this.baseSpeed;
-        this.spawnDelay  = 1600;
-        this.flashTimer  = 0;
-        this.dinoFrame   = 0;
-        this.frameTick   = 0;
-        this.dustTimer   = 0;
+        this.speed       = this.BASE_SPEED;
 
-        // ---- sky gradient (draw as rectangle layers) ----
-        this.add.rectangle(400, 300, 800, 600, 0xddeeff).setDepth(0);
+        // Obstacle spawn timer (manual, not time.addEvent, for speed-responsive gaps)
+        this.obstacleTimer     = 0;
+        this.nextObstacleDelay = Phaser.Math.Between(1800, 2800);
 
-        // ---- ground line ----
-        this.add.rectangle(400, this.GROUND_Y, 800, 4, 0x888888)
-            .setDepth(1);
+        // Cloud spawn timer
+        this.cloudTimer     = 0;
+        this.nextCloudDelay = Phaser.Math.Between(1000, 3500);
+        this.clouds         = [];
 
-        // ---- scrolling ground tiles ----
-        this.groundTiles = [];
-        for (let i = 0; i < 2; i++) {
-            const t = this.add.image(i * 800, this.GROUND_Y + 9, "groundTile")
-                .setOrigin(0, 0)
-                .setDepth(1);
-            this.groundTiles.push(t);
+        // Cactus pools
+        this.largeCactusPool = ["cactus1", "cactus2", "cactus3"];
+        this.smallCactusPool = ["cactusmini1", "cactusmini2", "cactusmini3"];
+
+        // ── World ─────────────────────────────────────────────────────
+        // Bottom bound = GROUND_Y acts as the physics floor for the dino
+        this.physics.world.setBounds(0, 0, 800, this.GROUND_Y);
+        this.cameras.main.setBackgroundColor("#f7f7f7");
+
+        // ── Ground visuals ────────────────────────────────────────────
+        // Scrolling ground strip (offline-sprite is 1204×68, top row = ground detail)
+        this.groundTile = this.add.tileSprite(0, this.GROUND_Y, 800, 16, "gndstrip")
+            .setOrigin(0, 0);
+
+        // Solid ground line on top of the strip
+        this.add.rectangle(400, this.GROUND_Y, 800, 2, 0x535353)
+            .setOrigin(0.5, 1);
+
+        // ── Animations ────────────────────────────────────────────────
+        if (!this.anims.exists("dino-run")) {
+            this.anims.create({
+                key: "dino-run",
+                frames: [
+                    { key: "dino1" }, { key: "dino2" }, { key: "dino3" },
+                    { key: "dino4" }, { key: "dino5" },
+                ],
+                frameRate: 10,
+                repeat: -1,
+            });
+        }
+        if (!this.anims.exists("dino-bird")) {
+            this.anims.create({
+                key: "dino-bird",
+                frames: [{ key: "dino-bird1" }, { key: "dino-bird2" }],
+                frameRate: 6,
+                repeat: -1,
+            });
         }
 
-        // ---- obstacle group ----
+        // ── Dino sprite ───────────────────────────────────────────────
+        this.dino = this.physics.add.sprite(this.DINO_X, this.GROUND_Y, "dino1")
+            .setOrigin(0.5, 1)
+            .setScale(this.SCALE)
+            .setDepth(2);
+
+        this.dino.body.setGravityY(this.GRAVITY);
+        this.dino.body.setCollideWorldBounds(true);
+        // No manual setSize — Phaser uses frame dimensions by default,
+        // which aligns body.bottom correctly with sprite.y (origin 0.5,1)
+
+        // ── Obstacles group ───────────────────────────────────────────
         this.obstacles = this.physics.add.group();
 
-        // ---- static ground collider (invisible) ----
-        // đặt ngay sát đường kẻ đất để physics body va chạm chính xác
-        this.groundCollider = this.physics.add.staticImage(
-            400, this.GROUND_Y + 2, null
-        ).setDisplaySize(800, 4).refreshBody();
-        // ẩn đi (đường kẻ đã được vẽ bằng rectangle riêng)
-        this.groundCollider.setVisible(false);
-
-        // ---- dino ----
-        // dùng origin(0,0) → sprite.y = top-left → body.y = sprite.y → không bị offset
-        // đặt dino sao cho đáy sprite = GROUND_Y
-        const DINO_H = 44;
-        this.dino = this.physics.add.sprite(
-            109,                        // x: center 130 - width/2
-            this.GROUND_Y - DINO_H,     // y: top = ground - height
-            "dino0"
-        ).setOrigin(0, 0).setDepth(3);
-
-        this.dino.body.setGravityY(this.gravity);
-        this.dino.body.setCollideWorldBounds(false);
-        // hitbox nhỏ hơn sprite để bao dung hơn
-        this.dino.body.setSize(28, 40);
-        this.dino.body.setOffset(7, 4);
-
-        // va chạm với ground tĩnh
-        this.physics.add.collider(this.dino, this.groundCollider);
-
-        // ---- overlap (slightly forgiving hitbox) ----
         this.physics.add.overlap(
             this.dino,
             this.obstacles,
-            this._hitObstacle,
+            this.onHitObstacle,
             null,
             this
         );
 
-        // ---- score UI ----
-        const textStyle = {
+        // ── Score display ─────────────────────────────────────────────
+        const monoStyle = {
             fontSize: "22px",
+            color: "#535353",
             fontFamily: "monospace",
-            color: "#222222",
-            stroke: "#ffffff",
-            strokeThickness: 3
         };
-        this.scoreText = this.add.text(20, 18, "SCORE  0", textStyle).setDepth(5);
-        this.hiScoreText = this.add.text(580, 18,
-            "HI  " + this.hiScore, textStyle).setDepth(5);
+        this.hiText    = this.add.text(610, 18, "HI " + this._fmt(this.hiScore), monoStyle).setDepth(10);
+        this.scoreText = this.add.text(780, 18, this._fmt(0), monoStyle).setOrigin(1, 0).setDepth(10);
 
-        // ---- start message ----
-        this.messageText = this.add.text(400, 240,
-            "DINO RUN",
-            {
-                fontSize: "56px",
-                fontFamily: "monospace",
-                color: "#222222",
-                stroke: "#ffffff",
-                strokeThickness: 6
-            }
-        ).setOrigin(0.5).setDepth(6);
+        // Score flash on milestone (every 100 pts)
+        this.lastMilestone = 0;
 
-        this.subText = this.add.text(400, 310,
-            "🤏  Pinch to start",
-            {
-                fontSize: "26px",
-                fontFamily: "monospace",
-                color: "#444444"
-            }
-        ).setOrigin(0.5).setDepth(6);
+        // ── Game-over overlay (hidden at start) ───────────────────────
+        this.goContainer = this.add.container(400, 0).setVisible(false).setDepth(10);
 
-        // hint tag
-        this.add.text(400, 560,
-            "Pinch = jump   •   Fist = restart after Game Over",
-            {
-                fontSize: "14px",
-                fontFamily: "monospace",
-                color: "#888888"
-            }
-        ).setOrigin(0.5).setDepth(5);
+        const goTitle = this.add.text(0, 210, "GAME OVER", {
+            fontSize: "32px",
+            color: "#535353",
+            fontFamily: "monospace",
+            fontStyle: "bold",
+        }).setOrigin(0.5);
 
-        // ---- obstacle spawn timer ----
-        this.spawnEvent = this.time.addEvent({
-            delay: this.spawnDelay,
-            loop: true,
-            callback: () => {
-                if (this.gameStarted && !this.gameOver) {
-                    this._spawnObstacle();
-                    // gradually speed up spawn rate
-                    const newDelay = Math.max(
-                        this.minDelay,
-                        this.spawnDelay - 15
-                    );
-                    if (newDelay !== this.spawnDelay) {
-                        this.spawnDelay = newDelay;
-                        this.spawnEvent.reset({
-                            delay: this.spawnDelay,
-                            loop: true,
-                            callback: this.spawnEvent.callback,
-                            callbackScope: this
-                        });
-                    }
-                }
-            }
-        });
+        this.restartIcon = this.add.image(0, 310, "restart")
+            .setScale(2.5)
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true });
 
-        // ---- cloud spawn timer ----
-        this.time.addEvent({
-            delay: 3500,
-            loop: true,
-            callback: this._spawnCloud,
-            callbackScope: this
-        });
-        // seed one cloud immediately
-        this._spawnCloud();
+        this.restartIcon.on("pointerdown", () => this.restartGame());
+
+        const goHint = this.add.text(0, 385, "✊ Nắm tay  /  Click để chơi lại", {
+            fontSize: "15px",
+            color: "#535353",
+            fontFamily: "monospace",
+        }).setOrigin(0.5);
+
+        this.goContainer.add([goTitle, this.restartIcon, goHint]);
+
+        // ── Start hint ────────────────────────────────────────────────
+        this.startHint = this.add.text(400, 430, "🤏 Pinch để bắt đầu", {
+            fontSize: "20px",
+            color: "#535353",
+            fontFamily: "monospace",
+        }).setOrigin(0.5).setDepth(10);
     }
 
-    // ----------------------------------------------------------------
-    //  SPAWN helpers
-    // ----------------------------------------------------------------
-    _spawnObstacle() {
-        const roll = Phaser.Math.Between(0, 100);
+    // ─────────────────────────────────────────────────────────────────
+    //  Helpers
+    // ─────────────────────────────────────────────────────────────────
 
-        if (roll < 20 && this.score > 300) {
-            // flying bird at score > 300
+    _fmt(n) {
+        return String(Math.floor(n)).padStart(5, "0");
+    }
+
+    _isOnGround() {
+        return this.dino.body.blocked.down;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Spawning
+    // ─────────────────────────────────────────────────────────────────
+
+    _spawnObstacleGroup() {
+        const sc = Math.floor(this.score);
+
+        // Birds appear only after score 300
+        const canBird = sc >= 300;
+        const roll    = Phaser.Math.Between(0, canBird ? 9 : 5);
+
+        if (canBird && roll >= 8) {
             this._spawnBird();
-        } else if (roll < 45) {
-            // tall double cactus (origin 0,0 → y = top)
-            const cactusH = 80;
-            const obs = this.obstacles.create(
-                880, this.GROUND_Y - cactusH, "cactusT"
-            ).setOrigin(0, 0).setDepth(2);
-            obs.body.setAllowGravity(false);
-            obs.body.setImmovable(true);
-            obs.body.setVelocityX(-this.speed);
-            obs.body.setSize(64, cactusH);
-            obs.body.setOffset(8, 0);
-            obs.obsType = "cactus";
-        } else {
-            // small single cactus
-            const cactusH = 60;
-            const obs = this.obstacles.create(
-                880, this.GROUND_Y - cactusH, "cactusS"
-            ).setOrigin(0, 0).setDepth(2);
-            obs.body.setAllowGravity(false);
-            obs.body.setImmovable(true);
-            obs.body.setVelocityX(-this.speed);
-            obs.body.setSize(24, cactusH);
-            obs.body.setOffset(7, 0);
-            obs.obsType = "cactus";
+            return;
         }
+
+        const isLarge = roll <= 2;
+        const pool    = isLarge ? this.largeCactusPool : this.smallCactusPool;
+        const key     = Phaser.Utils.Array.GetRandom(pool);
+
+        // Cap group size by score so player can always survive the maximum obstacle:
+        //   score <200 → max 1  (warm-up phase)
+        //   score <500 → max 2  (Δt=0.417s > 2-cactus danger at BASE_SPEED)
+        //   score≥500  → max 3  (at speed≥770, 3-cactus danger=0.235s < Δt)
+        const maxCount  = sc < 200 ? 1 : sc < 500 ? 2 : 3;
+        const countRoll = Phaser.Math.Between(0, 9);
+        const count     = Math.min(
+            countRoll <= 4 ? 1 : countRoll <= 7 ? 2 : 3,
+            maxCount
+        );
+
+        // Measure cactus display width from texture
+        const frame = this.textures.getFrame(key);
+        const cw    = frame.realWidth * this.SCALE;
+        const gap   = 6;
+
+        for (let i = 0; i < count; i++) {
+            this._spawnCactus(key, 860 + i * (cw + gap));
+        }
+    }
+
+    _spawnCactus(key, x) {
+        const c = this.obstacles.create(x, this.GROUND_Y, key)
+            .setOrigin(0.5, 1)
+            .setScale(this.SCALE)
+            .setDepth(2);
+
+        c.body.setImmovable(true);
+        c.body.setAllowGravity(false);
+        c.body.setVelocityX(-this.speed);
     }
 
     _spawnBird() {
-        const heightOptions = [
-            this.GROUND_Y - 130,
-            this.GROUND_Y - 90,
-            this.GROUND_Y - 55
-        ];
-        const y = Phaser.Math.RND.pick(heightOptions);
+        // Low  = bird at dino-torso level → must jump over
+        // High = bird above dino head    → run underneath safely
+        // Heights tuned for default frame-sized bodies (bird frame: 46×40, dino frame: 44×47)
+        // Dino body on ground: y = GROUND_Y - 47 .. GROUND_Y  (frame coords)
+        // Bird body center at BIRD_LOW: top = BIRD_LOW - 20, bottom = BIRD_LOW + 20
+        const BIRD_LOW  = this.GROUND_Y - 40;   // body overlaps dino torso → hit
+        const BIRD_HIGH = this.GROUND_Y - 110;   // body above dino top      → safe
 
-        const bird = this.obstacles.create(880, y, "birdA")
-            .setOrigin(0.5, 0.5).setDepth(2);
+        const y    = Phaser.Math.Between(0, 1) === 0 ? BIRD_LOW : BIRD_HIGH;
+        const bird = this.obstacles.create(870, y, "dino-bird1")
+            .setOrigin(0.5, 0.5)
+            .setScale(this.SCALE)
+            .setDepth(2);
+
+        bird.play("dino-bird");
         bird.body.setAllowGravity(false);
-        bird.body.setImmovable(true);
-        bird.body.setVelocityX(-this.speed * 1.1);
-        bird.body.setSize(30, 18, true);
-        bird.obsType = "bird";
-        bird.birdTick = 0;
+        bird.body.setVelocityX(-this.speed);
     }
 
     _spawnCloud() {
-        const y = Phaser.Math.Between(60, 200);
-        const spd = Phaser.Math.Between(40, 80);
-        const cloud = this.add.image(900, y, "cloud")
-            .setAlpha(0.75).setDepth(1);
-        this.tweens.add({
-            targets: cloud,
-            x: -120,
-            duration: (1020 / spd) * 1000,
-            onComplete: () => cloud.destroy()
-        });
+        const cloud = this.add.image(870, Phaser.Math.Between(60, 220), "cloud")
+            .setScale(this.SCALE)
+            .setDepth(1);
+        this.clouds.push(cloud);
     }
 
-    // ----------------------------------------------------------------
-    //  HIT
-    // ----------------------------------------------------------------
-    _hitObstacle() {
-        if (this.gameOver) return;
-        this._triggerGameOver();
-    }
+    // ─────────────────────────────────────────────────────────────────
+    //  Game events
+    // ─────────────────────────────────────────────────────────────────
 
-    async _triggerGameOver() {
-        if (this.gameOver) return;
-        this.gameOver = true;
+    onHitObstacle() {
+        if (this.isDead) return;
+        this.isDead = true;
 
-        // freeze obstacles
-        this.obstacles.getChildren().forEach(o => {
-            if (o.body) o.body.setVelocityX(0);
-        });
-
-        // dead pose
-        this.dino.setTexture("dinoDead");
-
-        // flash red overlay
-        this.flashTimer = 300;
-
-        if (this.score > this.hiScore) {
+        // Update HI score
+        if (Math.floor(this.score) > this.hiScore) {
             this.hiScore = Math.floor(this.score);
+            this.hiText.setText("HI " + this._fmt(this.hiScore));
         }
-        this.hiScoreText.setText("HI  " + this.hiScore);
 
-        // big game over text
-        this.messageText.setText("GAME OVER");
-        this.messageText.setVisible(true);
+        // Freeze dino on dead frame
+        this.dino.anims.stop();
+        this.dino.setTexture("dinodie");
+        this.dino.body.setVelocity(0, 0);
+        this.dino.body.setAllowGravity(false);
 
-        this.subText.setText("👊  Fist to restart");
-        this.subText.setVisible(true);
+        // Show game-over UI
+        this.goContainer.setVisible(true);
 
-        // save score
-        if (window.currentUserId) {
-            try {
-                await fetch(`${API_URL}/saveScore`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        userId: window.currentUserId,
-                        game: "dino",
-                        score: Math.floor(this.score)
-                    })
-                });
-                if (window.updateHighScoreBoard) {
-                    window.updateHighScoreBoard();
-                }
-            } catch (e) {
-                // offline – skip silently
-            }
-        }
+        // Brief flash
+        this.cameras.main.flash(120, 100, 0, 0);
     }
 
-    // ----------------------------------------------------------------
-    //  UPDATE  (called every frame)
-    // ----------------------------------------------------------------
+    restartGame() {
+        this.scene.restart({
+            controller: this.controller,
+            hiScore:    this.hiScore,
+        });
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    //  Update loop
+    // ─────────────────────────────────────────────────────────────────
+
     update(time, delta) {
-        // ---- flash overlay ----
-        if (this.flashTimer > 0) {
-            this.flashTimer -= delta;
+
+        // ── Clouds (always scroll, even before game start) ────────────
+        this.cloudTimer += delta;
+        if (this.cloudTimer >= this.nextCloudDelay) {
+            this.cloudTimer     = 0;
+            this.nextCloudDelay = Phaser.Math.Between(2000, 5000);
+            this._spawnCloud();
+        }
+        for (let i = this.clouds.length - 1; i >= 0; i--) {
+            const cl = this.clouds[i];
+            cl.x -= 60 * delta / 1000;
+            if (cl.x < -100) { cl.destroy(); this.clouds.splice(i, 1); }
         }
 
-        // ---- game over: wait for fist ----
-        if (this.gameOver) {
+        // ── Dead state ────────────────────────────────────────────────
+        if (this.isDead) {
             if (this.controller && this.controller.justClosedFist()) {
-                this.scene.restart({ controller: this.controller });
+                this.restartGame();
             }
             return;
         }
 
-        // ---- start on first pinch ----
+        const pinching = this.controller && this.controller.isJumping("dino");
+
+        // ── Waiting for first pinch to start ──────────────────────────
         if (!this.gameStarted) {
-            if (this.controller && this.controller.isJumping("dino")) {
+            if (pinching) {
                 this.gameStarted = true;
-                this.messageText.setVisible(false);
-                this.subText.setVisible(false);
-                this.dino.body.setVelocityY(this.jumpForce);
+                this.startHint.setVisible(false);
+                this.dino.play("dino-run");
+                this.dino.body.setVelocityY(this.JUMP_VEL);
             }
             return;
         }
 
-        const dt = delta / 1000; // seconds
-
-        // ---- score ----
-        this.score += dt * (this.speed / 6);
-        this.scoreText.setText("SCORE  " + Math.floor(this.score));
-
-        // ---- speed ramp ----
-        this.speed = this.baseSpeed + Math.floor(this.score / 4);
-
-        // ---- jump input ----
-        // dùng body.blocked.down (chính xác nhất với static collider)
-        const onGround = this.dino.body.blocked.down ||
-                         this.dino.body.touching.down;
-        if (this.controller && this.controller.isJumping("dino") && onGround) {
-            this.dino.body.setVelocityY(this.jumpForce);
+        // ── Jump (only when on ground) ────────────────────────────────
+        if (pinching && this._isOnGround()) {
+            this.dino.body.setVelocityY(this.JUMP_VEL);
         }
 
-        // ---- safety clamp (phòng khi rơi qua ground) ----
-        const floorTop = this.GROUND_Y - 44;   // = groundY
-        if (this.dino.y > floorTop) {
-            this.dino.y = floorTop;
-            this.dino.body.reset(this.dino.x, floorTop);
+        // ── Score & speed ─────────────────────────────────────────────
+        this.score += delta * 0.01;
+        const sc = Math.floor(this.score);
+
+        this.speed = Math.min(this.BASE_SPEED + sc * 0.9, this.MAX_SPEED);
+        this.scoreText.setText(this._fmt(sc));
+
+        // Update HI live
+        if (sc > this.hiScore) {
+            this.hiScore = sc;
+            this.hiText.setText("HI " + this._fmt(sc));
         }
 
-        // ---- dino animation ----
-        const onGround2 = this.dino.body.blocked.down || this.dino.body.touching.down;
-        if (onGround2) {
-            this.frameTick += delta;
-            if (this.frameTick > 90) {
-                this.frameTick = 0;
-                this.dinoFrame = this.dinoFrame === 1 ? 2 : 1;
-                this.dino.setTexture("dino" + this.dinoFrame);
-            }
-        } else {
-            // airborne – standing frame
-            this.dino.setTexture("dino0");
+        // Score milestone flash every 100 pts
+        if (sc > 0 && sc % 100 === 0 && sc !== this.lastMilestone) {
+            this.lastMilestone = sc;
+            this.scoreText.setColor("#ff9900");
+            this.time.delayedCall(400, () => {
+                if (this.scoreText) this.scoreText.setColor("#535353");
+            });
         }
 
-        // ---- bird wing flap ----
+        // ── Scroll ground ─────────────────────────────────────────────
+        this.groundTile.tilePositionX += this.speed * delta / 1000;
+
+        // ── Obstacle spawning ─────────────────────────────────────────
+        this.obstacleTimer += delta;
+        if (this.obstacleTimer >= this.nextObstacleDelay) {
+            this.obstacleTimer = 0;
+
+            // Gap decreases with speed, but always allows enough reaction time
+            const minGap = Math.max(600,  2000 - sc * 1.5);
+            const maxGap = Math.max(1100, 3500 - sc * 2.5);
+            this.nextObstacleDelay = Phaser.Math.Between(
+                Math.floor(minGap),
+                Math.floor(maxGap)
+            );
+
+            this._spawnObstacleGroup();
+        }
+
+        // ── Update obstacle velocities + clean up ─────────────────────
         this.obstacles.getChildren().forEach(obs => {
-            if (obs.obsType === "bird") {
-                obs.birdTick = (obs.birdTick || 0) + delta;
-                if (obs.birdTick > 200) {
-                    obs.birdTick = 0;
-                    obs.setTexture(
-                        obs.texture.key === "birdA" ? "birdB" : "birdA"
-                    );
-                }
+            if (obs.x < -200) {
+                obs.destroy();
+            } else if (obs.body) {
+                obs.body.setVelocityX(-this.speed);
             }
-            // update velocity so acceleration is applied
-            if (obs.body) {
-                const spd = obs.obsType === "bird"
-                    ? -this.speed * 1.1
-                    : -this.speed;
-                obs.body.setVelocityX(spd);
-            }
-            // cull off-screen
-            if (obs.x < -120) obs.destroy();
-        });
-
-        // ---- scroll ground tiles ----
-        this.groundTiles.forEach(tile => {
-            tile.x -= this.speed * dt;
-            if (tile.x <= -800) {
-                tile.x += 1600;
-            }
-        });
-
-        // ---- dust when running on ground ----
-        const onGround3 = this.dino.body.blocked.down || this.dino.body.touching.down;
-        if (onGround3 && this.gameStarted) {
-            this.dustTimer += delta;
-            if (this.dustTimer > 120) {
-                this.dustTimer = 0;
-                this._emitDust();
-            }
-        }
-    }
-
-    // ----------------------------------------------------------------
-    //  DUST particles
-    // ----------------------------------------------------------------
-    _emitDust() {
-        // dino origin(0,0) → center X = dino.x + width/2
-        const x = this.dino.x + 14 + Phaser.Math.Between(-6, 6);
-        const y = this.GROUND_Y;
-        const dust = this.add.image(x, y, "dust")
-            .setAlpha(0.6)
-            .setDepth(2);
-        this.tweens.add({
-            targets: dust,
-            x: x - Phaser.Math.Between(10, 25),
-            y: y - Phaser.Math.Between(4, 14),
-            alpha: 0,
-            scaleX: 2,
-            scaleY: 2,
-            duration: 350,
-            onComplete: () => dust.destroy()
         });
     }
 }

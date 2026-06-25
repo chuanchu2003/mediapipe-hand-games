@@ -36,6 +36,10 @@ class DinoScene extends Phaser.Scene {
     this.cloudTimer = 0;
 
     this.scaleFactor = 2;
+    this.debugHitbox = true;
+    this.noCollision = true;
+
+    this.hitboxGraphics = null;
   }
 
   init(data) {
@@ -97,16 +101,16 @@ class DinoScene extends Phaser.Scene {
 
     const W = this.sys.game.config.width;
     const H = this.sys.game.config.height;
-
     this.cameras.main.setBackgroundColor("#f5f5f5");
-
     this.createGround();
-
     this.createDino();
-
     this.createUI();
-
     this.createAnimations();
+    this.lastObstacleX = 900;
+    this.spawnTimer = 0;
+    this.cloudTimer = 0;
+    this.hitboxGraphics =
+    this.add.graphics();
   }
 
   createGround() {
@@ -196,6 +200,85 @@ class DinoScene extends Phaser.Scene {
     );
   }
 
+  drawHitboxes(){
+
+  if(!this.debugHitbox){
+    this.hitboxGraphics.clear();
+    return;
+  }
+
+  this.hitboxGraphics.clear();
+
+  this.hitboxGraphics.lineStyle(
+    2,
+    0xff0000,
+    1
+  );
+
+  // hitbox dino
+  const dinoBox = this.getDinoHitbox();
+
+  this.hitboxGraphics.strokeRect(
+    dinoBox.x,
+    dinoBox.y,
+    dinoBox.w,
+    dinoBox.h
+  );
+
+  // hitbox obstacle
+  this.obstacles.forEach(obs=>{
+
+    const boxes =
+      this.getObstacleHitboxes(obs);
+
+    boxes.forEach(box=>{
+
+      this.hitboxGraphics.strokeRect(
+        box.x,
+        box.y,
+        box.w,
+        box.h
+      );
+
+    });
+
+  });
+
+}
+getDinoHitbox(){
+
+  const w =
+    44 *
+    this.scaleFactor;
+
+  const h =
+    47 *
+    this.scaleFactor;
+
+  return {
+
+    x:this.dino.x - w/2 + 10,
+    y:this.dino.y - h/2 + 8,
+
+    w:w - 20,
+    h:h - 16
+
+  };
+
+}
+toggleDebugHitbox(){
+
+  this.debugHitbox =
+    !this.debugHitbox;
+
+}
+toggleNoCollision(){
+
+  this.noCollision =
+    !this.noCollision;
+
+}
+
   createAnimations() {
 
     this.anims.create({
@@ -237,6 +320,10 @@ class DinoScene extends Phaser.Scene {
     this.updateGround(delta);
 
     this.updateJump(delta);
+    this.updateClouds(delta);
+    this.updateObstacles(delta);
+    this.updateScore(delta);
+    this.drawHitboxes();
   }
 
   updateGround(delta) {
@@ -265,7 +352,276 @@ class DinoScene extends Phaser.Scene {
       );
     }
   }
+updateScore(delta){
 
+    this.score += delta * 0.01;
+
+    const scoreInt = Math.floor(this.score);
+
+    this.scoreText.setText(
+        "Score: " + scoreInt
+    );
+
+    this.speed =
+        10 + Math.floor(scoreInt / 100);
+
+    this.speedText.setText(
+        "Speed: " + this.speed
+    );
+
+}
+spawnCloud(){
+
+  const cloud = this.add.image(
+    this.sys.game.config.width + 100,
+    this.groundY - Phaser.Math.Between(120,300),
+    "cloud"
+  );
+
+  cloud.setScale(
+    Phaser.Math.FloatBetween(
+      1.5,
+      2.8
+    )
+  );
+
+  this.clouds.push(cloud);
+
+}
+updateClouds(delta){
+
+  this.cloudTimer += delta;
+
+  if(this.cloudTimer > 2500){
+
+    this.cloudTimer = 0;
+
+    this.spawnCloud();
+
+  }
+
+  const moveSpeed =
+    this.baseWorldSpeed * 0.25 *
+    (delta/1000);
+
+  for(let i=this.clouds.length-1;i>=0;i--){
+
+    const cloud = this.clouds[i];
+
+    cloud.x -= moveSpeed;
+
+    if(cloud.x < -200){
+
+      cloud.destroy();
+
+      this.clouds.splice(i,1);
+
+    }
+
+  }
+
+}
+spawnObstacle(type){
+
+  let sprite;
+
+  if(type==="mini"){
+
+    const key =
+      Phaser.Utils.Array.GetRandom([
+        "cactusmini1",
+        "cactusmini2",
+        "cactusmini3"
+      ]);
+
+    sprite = this.add.image(
+      900,
+      0,
+      key
+    );
+
+  }
+  else if(type==="big"){
+
+    const key =
+      Phaser.Utils.Array.GetRandom([
+        "cactus1",
+        "cactus2",
+        "cactus3"
+      ]);
+
+    sprite = this.add.image(
+      900,
+      0,
+      key
+    );
+
+  }
+  else{
+
+    sprite = this.add.sprite(
+      900,
+      0,
+      "flydino1"
+    );
+
+    sprite.play("fly");
+
+  }
+
+  sprite.setScale(this.scaleFactor);
+
+  sprite.obstacleType = type;
+
+  this.positionObstacle(sprite);
+
+  this.obstacles.push(sprite);
+
+}
+positionObstacle(obs){
+
+  const key = obs.texture.key;
+
+  if(obs.obstacleType==="fly"){
+
+    const offset =
+      Phaser.Math.Between(
+        30,
+        150
+      );
+
+    obs.y =
+      this.groundY - offset;
+
+    return;
+
+  }
+
+  const h =
+    obs.height *
+    this.scaleFactor;
+
+  obs.y =
+    this.groundY -
+    h/2 +
+    4;
+
+}
+updateObstacles(delta){
+
+  this.spawnTimer += delta;
+
+  const minGap =
+    1100 -
+    Math.min(
+      500,
+      Math.floor(this.score)
+    );
+
+  if(this.spawnTimer > minGap){
+
+    this.spawnTimer = 0;
+
+    const scoreInt =
+      Math.floor(this.score);
+
+    const r = Math.random();
+
+    if(
+      scoreInt >= 300 &&
+      r < 0.2
+    ){
+
+      this.spawnObstacle("fly");
+
+    }
+    else{
+
+      const type =
+        Math.random()<0.5
+        ? "mini"
+        : "big";
+
+      this.spawnObstacle(type);
+
+      // đôi cactus
+      if(
+        scoreInt >= 100 &&
+        Math.random() < 0.25
+      ){
+
+        this.time.delayedCall(
+          50,
+          ()=>{
+
+            const second =
+              this.obstacles[
+                this.obstacles.length-1
+              ];
+
+            if(!second) return;
+
+            const key =
+              second.texture.key;
+
+            // không cho cactus3 đôi
+            if(key==="cactus3")
+              return;
+
+            const clone =
+              this.add.image(
+                second.x +
+                second.displayWidth +
+                4,
+                second.y,
+                key
+              );
+
+            clone.setScale(
+              this.scaleFactor
+            );
+
+            clone.obstacleType =
+              second.obstacleType;
+
+            this.obstacles.push(clone);
+
+          }
+        );
+
+      }
+
+    }
+
+  }
+
+  const move =
+    this.baseWorldSpeed *
+    (1 + this.score/3000) *
+    (delta/1000);
+
+  for(
+    let i=this.obstacles.length-1;
+    i>=0;
+    i--
+  ){
+
+    const obs =
+      this.obstacles[i];
+
+    obs.x -= move;
+
+    if(obs.x < -300){
+
+      obs.destroy();
+
+      this.obstacles.splice(i,1);
+
+    }
+
+  }
+
+}
   updateJump(delta) {
 
     const jumpPressed =

@@ -622,10 +622,10 @@ button {
 }
 
 .project-page {
-  min-height: 100%;
+  min-height: 10%;
   display: grid;
   align-content: center;
-  padding: 86px clamp(28px, 6vw, 92px) 52px;
+  padding: 70px clamp(20px, 5vw, 70px) 52px;
 }
 
 .page-count,
@@ -643,13 +643,13 @@ button {
 }
 
 .project-page h1 {
-  max-width: 980px;
-  margin: 0;
+  max-width: 800px;
+  margin: 10;
   color: #fff;
   text-transform: uppercase;
   font-family: Anton, Impact, sans-serif;
-  font-size: clamp(56px, 8vw, 132px);
-  line-height: 0.9;
+  font-size: clamp(56px, 12vw, 12px);
+  line-height: 1.2;
   letter-spacing: 0;
 }
 

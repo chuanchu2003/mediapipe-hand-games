@@ -33,10 +33,8 @@ async function init() {
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS level_progress (
-      user_id INTEGER,
-      level INTEGER,
-      completed INTEGER,
-      PRIMARY KEY(user_id, level)
+      user_id INTEGER PRIMARY KEY,
+      highest_level INTEGER DEFAULT 0
     )
   `);
 

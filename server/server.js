@@ -83,6 +83,14 @@ try {
     args:[userId]
   });
 
+  await db.execute({
+    sql:`
+      INSERT INTO level_progress(user_id, highest_level)
+      VALUES(?,1)
+    `,
+    args:[userId]
+  });
+
   res.json({
     success:true,
     userId
@@ -406,17 +414,34 @@ app.post("/completeLevel", async (req,res)=>{
 
   const {userId, level} = req.body;
 
-await db.execute({
-  sql:`
-    INSERT OR REPLACE INTO level_progress(
-      user_id,
-      level,
-      completed
-    )
-    VALUES(?,?,1)
-  `,
-  args:[userId,level]
-});
+  if(!userId || !level){
+    return res.json({success:false});
+  }
+
+  const current = await db.execute({
+    sql:"SELECT highest_level FROM level_progress WHERE user_id=?",
+    args:[userId]
+  });
+
+  const currentHighest = current.rows[0] ? current.rows[0].highest_level : 0;
+
+  // chỉ cho qua đúng level kế tiếp (chặn nhảy cóc kiểu gọi thẳng API)
+  if(level > currentHighest + 1){
+    return res.json({success:false, message:"Level không hợp lệ"});
+  }
+
+  // level <= currentHighest nghĩa là chơi lại level cũ -> không cần update
+  if(level > currentHighest){
+    await db.execute({
+      sql:`
+        INSERT INTO level_progress(user_id, highest_level)
+        VALUES(?,?)
+        ON CONFLICT(user_id) DO UPDATE SET
+          highest_level = excluded.highest_level
+      `,
+      args:[userId,level]
+    });
+  }
 
 res.json({success:true});
 
@@ -434,16 +459,17 @@ app.get("/levels/:userId", async (req,res)=>{
   const userId=req.params.userId;
 
 const result = await db.execute({
-  sql:"SELECT level FROM level_progress WHERE user_id=?",
+  sql:"SELECT highest_level FROM level_progress WHERE user_id=?",
   args:[userId]
 });
 
-const rows = result.rows;
-let levels = {};
+const row = result.rows[0];
+const highestLevel = row ? row.highest_level : 0;
 
-rows.forEach(r => {
-  levels[r.level] = true;
-});
+let levels = {};
+for(let i=1;i<=highestLevel;i++){
+  levels[i] = true;
+}
 
 res.json({
   success:true,
